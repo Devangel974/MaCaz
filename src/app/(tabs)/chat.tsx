@@ -22,7 +22,8 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const { household, members, me, partner, memberById } = useHousehold();
-  const { messages, hasMore, loadMore, send, markRead, partnerOnline, partnerTyping, notifyTyping } = useChat();
+  const { loading, messages, hasMore, loadMore, send, markRead, partnerOnline, partnerTyping, notifyTyping } = useChat();
+  const showEmpty = !loading && messages.length === 0 && !partnerTyping;
   const [draft, setDraft] = useState('');
 
   // Écran visible : pas de bannière push, et tout est marqué comme lu.
@@ -92,52 +93,53 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <FlatList
-        inverted
-        data={messages}
-        keyExtractor={(m) => m.id}
-        keyboardShouldPersistTaps="handled"
-        onEndReached={() => hasMore && loadMore()}
-        onEndReachedThreshold={0.3}
-        contentContainerStyle={{ padding: space.lg, gap: space.sm, flexGrow: 1 }}
-        ListHeaderComponent={partnerTyping ? <TypingBubble /> : null}
-        ListEmptyComponent={
-          // La liste est inversée : on retourne l'état vide pour qu'il s'affiche à l'endroit.
-          <View style={{ flex: 1, justifyContent: 'center', transform: [{ scaleY: -1 }] }}>
-            <EmptyState
-              icon={MessageSquare}
-              title="Votre fil à deux"
-              description="Messages, et ajouts à la liste de courses : tout se retrouve ici."
-            />
-          </View>
-        }
-        renderItem={({ item, index }) => {
-          const older = messages[index + 1];
-          const newer = messages[index - 1];
-          const showDay = !older || !isSameDay(older.created_at, item.created_at);
-          const endOfRun =
-            !newer ||
-            newer.sender_id !== item.sender_id ||
-            newer.kind !== item.kind ||
-            Date.parse(newer.created_at) - Date.parse(item.created_at) > GROUP_GAP_MS;
-          const mine = item.sender_id === me?.user_id;
-          return (
-            <View style={{ gap: space.sm }}>
-              {showDay && <DaySeparator iso={item.created_at} />}
-              {item.kind === 'items_added' ? (
-                <ItemsCard message={item} author={memberById(item.sender_id)} mine={mine} />
-              ) : (
-                <Bubble
-                  message={item}
-                  mine={mine}
-                  showMeta={endOfRun}
-                  receipt={mine && item.id === myLastId ? (seenByPartner(item) ? 'Lu' : 'Envoyé') : null}
-                />
-              )}
-            </View>
-          );
-        }}
-      />
+      {showEmpty ? (
+        // Hors de la FlatList inversée : l'état vide s'affiche toujours à l'endroit.
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <EmptyState
+            icon={MessageSquare}
+            title="Votre fil à deux"
+            description="Messages, et ajouts à la liste de courses : tout se retrouve ici."
+          />
+        </View>
+      ) : (
+        <FlatList
+          inverted
+          data={messages}
+          keyExtractor={(m) => m.id}
+          keyboardShouldPersistTaps="handled"
+          onEndReached={() => hasMore && loadMore()}
+          onEndReachedThreshold={0.3}
+          contentContainerStyle={{ padding: space.lg, gap: space.sm, flexGrow: 1 }}
+          ListHeaderComponent={partnerTyping ? <TypingBubble /> : null}
+          renderItem={({ item, index }) => {
+            const older = messages[index + 1];
+            const newer = messages[index - 1];
+            const showDay = !older || !isSameDay(older.created_at, item.created_at);
+            const endOfRun =
+              !newer ||
+              newer.sender_id !== item.sender_id ||
+              newer.kind !== item.kind ||
+              Date.parse(newer.created_at) - Date.parse(item.created_at) > GROUP_GAP_MS;
+            const mine = item.sender_id === me?.user_id;
+            return (
+              <View style={{ gap: space.sm }}>
+                {showDay && <DaySeparator iso={item.created_at} />}
+                {item.kind === 'items_added' ? (
+                  <ItemsCard message={item} author={memberById(item.sender_id)} mine={mine} />
+                ) : (
+                  <Bubble
+                    message={item}
+                    mine={mine}
+                    showMeta={endOfRun}
+                    receipt={mine && item.id === myLastId ? (seenByPartner(item) ? 'Lu' : 'Envoyé') : null}
+                  />
+                )}
+              </View>
+            );
+          }}
+        />
+      )}
 
       {/* Zone de saisie */}
       <View
