@@ -1,0 +1,3 @@
+# Utilisé par la CLI Supabase (npx supabase ...). Le projet distant reste la référence.
+[functions.notify]
+verify_jwt = false   # appelée par le Database Webhook, protégée par l'en-tête x-webhook-secret
