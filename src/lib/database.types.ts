@@ -5,7 +5,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type MemberColor = 'blue' | 'orange';
-export type MessageKind = 'text' | 'items_added';
+export type MessageKind = 'text' | 'items_added' | 'event_added';
 
 type HouseholdRow = {
   id: string;
@@ -73,6 +73,43 @@ export type Database = {
         };
         Relationships: [];
       };
+      events: {
+        Row: {
+          id: string;
+          household_id: string;
+          title: string;
+          starts_at: string;
+          ends_at: string | null;
+          all_day: boolean;
+          for_user: string | null;
+          location: string | null;
+          reminder_minutes: number | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id: string;
+          title: string;
+          starts_at: string;
+          ends_at?: string | null;
+          all_day?: boolean;
+          for_user?: string | null;
+          location?: string | null;
+          reminder_minutes?: number | null;
+        };
+        Update: {
+          title?: string;
+          starts_at?: string;
+          ends_at?: string | null;
+          all_day?: boolean;
+          for_user?: string | null;
+          location?: string | null;
+          reminder_minutes?: number | null;
+        };
+        Relationships: [];
+      };
       messages: {
         Row: {
           id: string;
@@ -119,3 +156,5 @@ export type Household = PublicTables['households']['Row'];
 export type Member = PublicTables['household_members']['Row'];
 export type ShoppingItem = PublicTables['shopping_items']['Row'];
 export type Message = PublicTables['messages']['Row'];
+export type CalendarEvent = PublicTables['events']['Row'];
+export type CalendarEventInput = Omit<PublicTables['events']['Insert'], 'household_id' | 'id'>;

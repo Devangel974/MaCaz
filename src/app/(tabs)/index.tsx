@@ -5,9 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarPair } from '@/components/Avatar';
 import { AppText, Card, Chip, SegmentBar } from '@/components/ui';
+import { formatEventWhen, formatHour, occursOn, sameDay } from '@/lib/calendar';
 import { formatTime, formatToday, greeting } from '@/lib/dates';
 import { preview } from '@/lib/messages';
 import { useChat } from '@/providers/ChatProvider';
+import { useEvents } from '@/providers/EventsProvider';
 import { useHousehold } from '@/providers/HouseholdProvider';
 import { useShopping } from '@/providers/ShoppingProvider';
 import { colors, radius, space } from '@/theme';
@@ -25,6 +27,14 @@ export default function HomeScreen() {
   const { me, partner, members, household, memberById } = useHousehold();
   const { items, toBuy, inCart } = useShopping();
   const { lastMessage, unreadCount } = useChat();
+  const { events } = useEvents();
+
+  const now = new Date();
+  const todayCount = events.filter((e) => occursOn(e, now)).length;
+  // Prochain événement : en cours ou à venir (journée entière d'aujourd'hui incluse).
+  const next = events.find((e) =>
+    e.all_day ? occursOn(e, now) || new Date(e.starts_at) > now : new Date(e.ends_at ?? e.starts_at) >= now,
+  );
 
   const total = items.length;
   const salut = greeting() === 'Bonsoir' ? 'Bonsoir' : 'Salut';
@@ -155,17 +165,30 @@ export default function HomeScreen() {
           )}
         </Card>
 
-        {/* Agenda — bloc lagon (bientôt) */}
+        {/* Agenda — bloc lagon */}
         <Card
           bg={colors.lagoon}
           onPress={() => router.navigate('/agenda')}
-          accessibilityLabel="Agenda partagé, bientôt"
+          accessibilityLabel={`Agenda : ${todayCount} événement${todayCount > 1 ? 's' : ''} aujourd'hui`}
           style={{ flex: 1, minHeight: 176, justifyContent: 'space-between', gap: space.lg }}>
-          <IconTile icon={CalendarDays} bg={colors.ink} color={colors.lagoon} />
-          <View style={{ gap: space.xs }}>
-            <AppText variant="label">Bientôt</AppText>
-            <AppText>L&apos;agenda à deux arrive</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <IconTile icon={CalendarDays} bg={colors.ink} color={colors.lagoon} />
+            <AppText variant="title">{todayCount}</AppText>
           </View>
+          {next ? (
+            <View style={{ gap: space.xs }}>
+              <AppText variant="label">
+                {sameDay(new Date(next.starts_at), new Date())
+                  ? next.all_day
+                    ? "Aujourd'hui"
+                    : `Prochain · ${formatHour(new Date(next.starts_at))}`
+                  : formatEventWhen(next.starts_at, next.all_day)}
+              </AppText>
+              <AppText numberOfLines={3}>{next.title}</AppText>
+            </View>
+          ) : (
+            <AppText>Rien de prévu. On s&apos;organise ?</AppText>
+          )}
         </Card>
       </View>
     </ScrollView>

@@ -8,11 +8,15 @@ import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
+import { dayKey } from '@/lib/calendar';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
+import { ChatProvider } from '@/providers/ChatProvider';
+import { EventsProvider } from '@/providers/EventsProvider';
 import { HouseholdProvider, useHousehold } from '@/providers/HouseholdProvider';
+import { ShoppingProvider } from '@/providers/ShoppingProvider';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -29,10 +33,25 @@ export default function RootLayout() {
       <AuthProvider>
         <HouseholdProvider>
           <StatusBar style="dark" />
-          {fontsLoaded && <RootNavigator />}
+          <DataProviders>{fontsLoaded && <RootNavigator />}</DataProviders>
         </HouseholdProvider>
       </AuthProvider>
     </KeyboardProvider>
+  );
+}
+
+/**
+ * Données du foyer partagées par les onglets et les modales (ex. formulaire d'événement).
+ * Remontées à chaque changement de foyer pour ne jamais mélanger deux comptes.
+ */
+function DataProviders({ children }: { children: ReactNode }) {
+  const { household } = useHousehold();
+  return (
+    <ShoppingProvider key={household?.id ?? 'aucun'}>
+      <ChatProvider>
+        <EventsProvider>{children}</EventsProvider>
+      </ChatProvider>
+    </ShoppingProvider>
   );
 }
 
@@ -50,8 +69,11 @@ function RootNavigator() {
   const response = Notifications.useLastNotificationResponse();
   useEffect(() => {
     const url = response?.notification.request.content.data?.url;
-    if (inHousehold && typeof url === 'string' && (url === '/chat' || url === '/courses')) {
-      router.navigate(url);
+    if (!inHousehold || typeof url !== 'string') return;
+    if (url === '/chat' || url === '/courses') router.navigate(url);
+    if (url === '/agenda') {
+      const day = response?.notification.request.content.data?.day;
+      router.navigate({ pathname: '/agenda', params: typeof day === 'string' ? { date: dayKey(new Date(day)) } : {} });
     }
   }, [response, inHousehold]);
 
@@ -68,6 +90,7 @@ function RootNavigator() {
       <Stack.Protected guard={inHousehold}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="foyer" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="evenement" options={{ presentation: 'modal' }} />
       </Stack.Protected>
     </Stack>
   );

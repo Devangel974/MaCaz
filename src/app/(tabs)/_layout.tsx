@@ -1,21 +1,10 @@
 import { Tabs } from 'expo-router';
 
 import { TabBar } from '@/components/TabBar';
-import { ChatProvider, useChat } from '@/providers/ChatProvider';
-import { ShoppingProvider } from '@/providers/ShoppingProvider';
+import { useChat } from '@/providers/ChatProvider';
 import { colors } from '@/theme';
 
 export default function TabsLayout() {
-  return (
-    <ShoppingProvider>
-      <ChatProvider>
-        <AppTabs />
-      </ChatProvider>
-    </ShoppingProvider>
-  );
-}
-
-function AppTabs() {
   const { unreadCount } = useChat();
   return (
     <Tabs

@@ -1,9 +1,9 @@
 # MaCaz — appli familiale privée (MVP)
 
-Liste de courses partagée en temps réel + chat avec notifications push, pour deux personnes.
+Liste de courses partagée en temps réel, chat avec notifications push et agenda partagé, pour deux personnes.
 Stack : Expo SDK 57 (React Native 0.86, Expo Router, TypeScript) · Supabase (Auth, Postgres + RLS, Realtime, Edge Functions) · Expo Push (FCM).
 
-Agenda et Documents sont présents dans la navigation sous forme d'écrans « bientôt » : ce sont les étapes 2 et 3.
+Documents est présent dans la navigation sous forme d'écran « bientôt » : c'est l'étape 3.
 
 ---
 
@@ -11,7 +11,7 @@ Agenda et Documents sont présents dans la navigation sous forme d'écrans « bi
 
 1. Crée un projet sur supabase.com (offre gratuite).
 2. **Authentication › Sign In / Providers › Email** : désactive « Confirm email » (plus simple pour 2 comptes). Si tu le laisses actif, l'appli affiche « Ouvre le lien reçu par email » après l'inscription.
-3. **SQL Editor › New query** : colle tout `supabase/schema.sql`, puis **Run**. Le script peut être relancé sans casse.
+3. **SQL Editor › New query** : colle tout `supabase/schema.sql`, puis **Run**. Recommence avec chaque fichier de `supabase/migrations/` dans l'ordre (`002_agenda.sql`…). Tous les scripts peuvent être relancés sans casse.
 4. **Project Settings › API Keys** : note l'URL du projet et la clé **publishable** (`sb_publishable_…`, ou l'ancienne clé `anon`). Ne mets jamais la clé secrète / `service_role` dans l'appli.
 5. **Realtime › Settings** : si tu actives « Private channels only », rien ne change pour l'appli. Le canal de présence est déjà privé et protégé par RLS.
 
@@ -83,7 +83,7 @@ Ensuite, dans Supabase : **Database › Webhooks › Create a new hook**
 - Type : **Supabase Edge Functions** › `notify` › méthode POST
 - En-tête HTTP : `x-webhook-secret` = la même chaîne que ci-dessus
 
-Ce qui est notifié : chaque message du chat, et le premier article d'une série d'ajouts à la liste. Les ajouts suivants (< 15 min) sont regroupés dans la même carte du chat, sans renvoyer de notification. Toucher une notification ouvre le chat ou la liste. Si tu es déjà sur l'écran Chat, aucune bannière ne s'affiche.
+Ce qui est notifié : chaque message du chat, chaque nouvel événement de l'agenda, et le premier article d'une série d'ajouts à la liste. Les ajouts suivants (< 15 min) sont regroupés dans la même carte du chat, sans renvoyer de notification. Toucher une notification ouvre le chat, la liste ou l’agenda au bon jour. Si tu es déjà sur l'écran Chat, aucune bannière ne s'affiche.
 
 ## 5. Premier lancement
 
@@ -120,13 +120,15 @@ src/
     connexion.tsx            email + mot de passe
     foyer-setup.tsx          créer le foyer / rejoindre avec un code
     foyer.tsx                (modale) nom, membres, code, notifications, déconnexion
-    (tabs)/                  accueil, courses, chat, agenda*, documents*   (* = bientôt)
+    evenement.tsx            (modale) création / modification d'un événement
+    (tabs)/                  accueil, courses, chat, agenda, documents*   (* = bientôt)
   components/                ui.tsx (boutons, cartes, champs…), Avatar, TabBar, ComingSoon
   providers/                 Auth, Household, Shopping, Chat (état + temps réel)
   lib/                       supabase, notifications, catégories d'articles, dates, types BDD
   theme/                     couleurs, typo, espacements (planche « Système visuel »)
 supabase/
   schema.sql                 tables, RLS, RPC create/join, triggers, temps réel
+  migrations/002_agenda.sql  table events, RLS, carte « ajouté à l'agenda » dans le chat
   functions/notify/          Edge Function Expo Push
 ```
 

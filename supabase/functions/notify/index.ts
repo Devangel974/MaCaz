@@ -12,9 +12,9 @@ type MessageRow = {
   id: string;
   household_id: string;
   sender_id: string | null;
-  kind: 'text' | 'items_added';
+  kind: 'text' | 'items_added' | 'event_added';
   body: string;
-  meta: { items?: string[] } | null;
+  meta: { items?: string[]; title?: string; starts_at?: string; all_day?: boolean } | null;
   created_at: string;
 };
 
@@ -32,6 +32,17 @@ const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+// Fuseau du foyer (les Edge Functions tournent en UTC). Modifiable via le secret APP_TIMEZONE.
+const TIMEZONE = Deno.env.get('APP_TIMEZONE') ?? 'Indian/Reunion';
+
+function formatWhen(iso: string, allDay: boolean) {
+  const d = new Date(iso);
+  const day = new Intl.DateTimeFormat('fr-FR', { timeZone: TIMEZONE, weekday: 'short', day: 'numeric', month: 'short' }).format(d);
+  if (allDay) return day;
+  const time = new Intl.DateTimeFormat('fr-FR', { timeZone: TIMEZONE, hour: '2-digit', minute: '2-digit' }).format(d);
+  return `${day} à ${time}`;
+}
 
 const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
@@ -69,6 +80,11 @@ Deno.serve(async (req) => {
     const items = msg.meta?.items ?? [];
     body = `a ajouté ${items.join(', ') || 'un article'} à la liste`;
     url = '/courses';
+  } else if (msg.kind === 'event_added') {
+    body = `a ajouté à l'agenda : ${msg.meta?.title ?? 'un événement'}${
+      msg.meta?.starts_at ? `, ${formatWhen(msg.meta.starts_at, msg.meta.all_day === true)}` : ''
+    }`;
+    url = '/agenda';
   } else {
     body = msg.body;
   }
@@ -84,7 +100,7 @@ Deno.serve(async (req) => {
         sound: 'default',
         priority: 'high',
         channelId: 'messages',
-        data: { url, messageId: msg.id },
+        data: { url, messageId: msg.id, ...(msg.kind === 'event_added' && msg.meta?.starts_at ? { day: msg.meta.starts_at } : {}) },
       })),
     ),
   });

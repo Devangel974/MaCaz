@@ -9,12 +9,13 @@ import { AvatarPair } from '@/components/Avatar';
 import { AppText, EmptyState, IconButton } from '@/components/ui';
 import type { Member } from '@/lib/database.types';
 import { formatDayLabel, formatTime, isSameDay } from '@/lib/dates';
-import { itemsOf } from '@/lib/messages';
+import { dayKey, formatHour } from '@/lib/calendar';
+import { eventOf, itemsOf } from '@/lib/messages';
 import { setChatVisible } from '@/lib/notifications';
 import { errorMessage } from '@/lib/supabase';
 import { type ChatMessage, useChat } from '@/providers/ChatProvider';
 import { useHousehold } from '@/providers/HouseholdProvider';
-import { colors, radius, shadow, space, type } from '@/theme';
+import { colors, personColors, radius, shadow, space, type } from '@/theme';
 
 const GROUP_GAP_MS = 5 * 60 * 1000;
 
@@ -131,6 +132,8 @@ export default function ChatScreen() {
                 {showDay && <DaySeparator iso={item.created_at} />}
                 {item.kind === 'items_added' ? (
                   <ItemsCard message={item} author={memberById(item.sender_id)} mine={mine} />
+                ) : item.kind === 'event_added' ? (
+                  <EventAddedCard message={item} author={memberById(item.sender_id)} mine={mine} memberById={memberById} />
                 ) : (
                   <Bubble
                     message={item}
@@ -246,6 +249,75 @@ function Bubble({
         </View>
       )}
     </View>
+  );
+}
+
+const dowFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
+
+function EventAddedCard({
+  message,
+  author,
+  mine,
+  memberById,
+}: {
+  message: ChatMessage;
+  author: Member | null;
+  mine: boolean;
+  memberById: (id: string | null) => Member | null;
+}) {
+  const e = eventOf(message);
+  if (!e) return null;
+  const start = new Date(e.startsAt);
+  const target = e.forUser ? memberById(e.forUser) : null;
+  const bg = target ? personColors[target.color].solid : colors.lagoon;
+  const who = mine ? 'Tu as' : `${author?.display_name ?? "Quelqu'un"} a`;
+  const forWho = target ? `Pour ${target.display_name}` : 'Ensemble';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${who} ajouté ${e.title}. Voir dans l'agenda`}
+      onPress={() => router.navigate({ pathname: '/agenda', params: { date: dayKey(start) } })}
+      style={({ pressed }) => [
+        {
+          alignSelf: mine ? 'flex-end' : 'flex-start',
+          width: '80%',
+          gap: space.sm,
+          padding: space.md,
+          paddingRight: space.lg,
+          borderRadius: 22,
+          backgroundColor: bg,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        },
+        mine ? { borderBottomRightRadius: 6 } : { borderBottomLeftRadius: 6 },
+      ]}>
+      <AppText variant="label">{who} ajouté à l&apos;agenda</AppText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 16,
+            backgroundColor: colors.white,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <AppText variant="label" style={{ lineHeight: 14, textTransform: 'uppercase' }}>
+            {dowFmt.format(start).replace('.', '')}
+          </AppText>
+          <AppText variant="section" style={{ lineHeight: 22 }}>
+            {start.getDate()}
+          </AppText>
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText variant="bodyStrong" numberOfLines={2}>
+            {e.title}
+          </AppText>
+          <AppText variant="caption">
+            {e.allDay ? 'Toute la journée' : formatHour(start)} · {forWho}
+          </AppText>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
