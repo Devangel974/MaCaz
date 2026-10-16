@@ -1,5 +1,6 @@
 import { router, useIsFocused } from 'expo-router';
-import { CheckCheck, MessageSquare, Send, ShoppingBag } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { CheckCheck, MessageSquare, Send, ShoppingBag, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, Pressable, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -23,7 +24,7 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const { household, members, me, partner, memberById } = useHousehold();
-  const { loading, messages, hasMore, loadMore, send, markRead, partnerOnline, partnerTyping, notifyTyping } = useChat();
+  const { loading, messages, remove, clearAll, hasMore, loadMore, send, markRead, partnerOnline, partnerTyping, notifyTyping } = useChat();
   const showEmpty = !loading && messages.length === 0 && !partnerTyping;
   const [draft, setDraft] = useState('');
 
@@ -52,6 +53,39 @@ export default function ChatScreen() {
       Alert.alert('Message non envoyé', errorMessage(e));
     }
   };
+
+  const confirmDelete = (m: ChatMessage) => {
+    if (m.pending) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const what =
+      m.kind === 'text'
+        ? 'Ce message'
+        : m.kind === 'items_added'
+          ? 'Cette carte (les articles restent dans la liste de courses)'
+          : "Cette carte (l'événement reste dans l'agenda)";
+    Alert.alert('Supprimer ?', `${what} sera supprimé pour vous deux.`, [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () => remove(m.id).catch((e) => Alert.alert('Oups', errorMessage(e))),
+      },
+    ]);
+  };
+
+  const confirmClear = () =>
+    Alert.alert(
+      'Vider la conversation ?',
+      "Tous les messages et cartes seront supprimés pour vous deux. La liste de courses et l'agenda ne changent pas.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Tout supprimer',
+          style: 'destructive',
+          onPress: () => clearAll().catch((e) => Alert.alert('Oups', errorMessage(e))),
+        },
+      ],
+    );
 
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: colors.ground }}>
@@ -95,6 +129,9 @@ export default function ChatScreen() {
             </AppText>
           </View>
         </View>
+        {messages.length > 0 && (
+          <IconButton icon={Trash2} label="Vider la conversation" variant="plain" color={colors.white} onPress={confirmClear} />
+        )}
       </View>
 
       {showEmpty ? (
@@ -131,11 +168,18 @@ export default function ChatScreen() {
               <View style={{ gap: space.sm }}>
                 {showDay && <DaySeparator iso={item.created_at} />}
                 {item.kind === 'items_added' ? (
-                  <ItemsCard message={item} author={memberById(item.sender_id)} mine={mine} />
+                  <ItemsCard message={item} author={memberById(item.sender_id)} mine={mine} onLongPress={() => confirmDelete(item)} />
                 ) : item.kind === 'event_added' ? (
-                  <EventAddedCard message={item} author={memberById(item.sender_id)} mine={mine} memberById={memberById} />
+                  <EventAddedCard
+                    message={item}
+                    author={memberById(item.sender_id)}
+                    mine={mine}
+                    memberById={memberById}
+                    onLongPress={() => confirmDelete(item)}
+                  />
                 ) : (
                   <Bubble
+                    onLongPress={() => confirmDelete(item)}
                     message={item}
                     mine={mine}
                     showMeta={endOfRun}
@@ -216,7 +260,9 @@ function Bubble({
   mine,
   showMeta,
   receipt,
+  onLongPress,
 }: {
+  onLongPress: () => void;
   message: ChatMessage;
   mine: boolean;
   showMeta: boolean;
@@ -224,8 +270,12 @@ function Bubble({
 }) {
   return (
     <View style={{ alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: '78%', alignItems: mine ? 'flex-end' : 'flex-start', gap: space.xs }}>
-      <View
-        style={[
+      <Pressable
+        onLongPress={onLongPress}
+        delayLongPress={350}
+        accessibilityHint="Appui long pour supprimer"
+        style={({ pressed }) => [
+          { transform: [{ scale: pressed ? 0.98 : 1 }] },
           {
             paddingHorizontal: space.lg,
             paddingVertical: space.md,
@@ -235,10 +285,8 @@ function Bubble({
           },
           mine ? { borderBottomRightRadius: 6 } : { borderBottomLeftRadius: 6 },
         ]}>
-        <AppText color={mine ? colors.white : colors.ink} selectable>
-          {message.body}
-        </AppText>
-      </View>
+        <AppText color={mine ? colors.white : colors.ink}>{message.body}</AppText>
+      </Pressable>
       {(showMeta || receipt) && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, paddingHorizontal: space.sm }}>
           <AppText variant="caption" color={colors.ink3} style={{ fontVariant: ['tabular-nums'] }}>
@@ -259,11 +307,13 @@ function EventAddedCard({
   author,
   mine,
   memberById,
+  onLongPress,
 }: {
   message: ChatMessage;
   author: Member | null;
   mine: boolean;
   memberById: (id: string | null) => Member | null;
+  onLongPress: () => void;
 }) {
   const e = eventOf(message);
   if (!e) return null;
@@ -277,6 +327,8 @@ function EventAddedCard({
       accessibilityRole="button"
       accessibilityLabel={`${who} ajouté ${e.title}. Voir dans l'agenda`}
       onPress={() => router.navigate({ pathname: '/agenda', params: { date: dayKey(start) } })}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={({ pressed }) => [
         {
           alignSelf: mine ? 'flex-end' : 'flex-start',
@@ -321,7 +373,17 @@ function EventAddedCard({
   );
 }
 
-function ItemsCard({ message, author, mine }: { message: ChatMessage; author: Member | null; mine: boolean }) {
+function ItemsCard({
+  message,
+  author,
+  mine,
+  onLongPress,
+}: {
+  message: ChatMessage;
+  author: Member | null;
+  mine: boolean;
+  onLongPress: () => void;
+}) {
   const items = itemsOf(message);
   const who = mine ? 'Tu as' : `${author?.display_name ?? "Quelqu'un"} a`;
   return (
@@ -329,6 +391,8 @@ function ItemsCard({ message, author, mine }: { message: ChatMessage; author: Me
       accessibilityRole="button"
       accessibilityLabel={`${who} ajouté ${items.join(', ')}. Voir la liste`}
       onPress={() => router.navigate('/courses')}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={({ pressed }) => [
         {
           alignSelf: mine ? 'flex-end' : 'flex-start',

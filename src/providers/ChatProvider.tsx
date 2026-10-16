@@ -26,6 +26,10 @@ type ChatContextValue = {
   hasMore: boolean;
   loadMore: () => Promise<void>;
   send: (body: string) => Promise<void>;
+  /** Supprime un élément du chat (pour les deux). */
+  remove: (id: string) => Promise<void>;
+  /** Vide toute la conversation (pour les deux). */
+  clearAll: () => Promise<void>;
   unreadCount: number;
   lastMessage: ChatMessage | null;
   markRead: () => void;
@@ -100,6 +104,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => upsert(prev, payload.new as Message));
         },
       )
+      // Suppressions faites sur l'autre téléphone (seul l'id est transmis).
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
+        const id = (payload.old as Partial<Message>).id;
+        if (id) setMessages((prev) => prev.filter((m) => m.id !== id));
+      })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') load();
       });
@@ -206,6 +215,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       });
       if (error) throw error;
       updateMe({ last_read_at: data.created_at });
+    },
+    async remove(id) {
+      if (id.startsWith('tmp-')) return;
+      const before = messages;
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+      const { error } = await supabase.from('messages').delete().eq('id', id);
+      if (error) {
+        setMessages(before);
+        throw error;
+      }
+    },
+    async clearAll() {
+      if (!householdId) return;
+      const before = messages;
+      setMessages([]);
+      setHasMore(false);
+      const { error } = await supabase.from('messages').delete().eq('household_id', householdId);
+      if (error) {
+        setMessages(before);
+        throw error;
+      }
     },
     markRead() {
       if (!me || !newest) return;
