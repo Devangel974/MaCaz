@@ -1,12 +1,13 @@
-import { Check, ListFilter, Plus, ShoppingBag, Sparkles } from 'lucide-react-native';
+import { Check, Ellipsis, Plus, ShoppingBag, Sparkles } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, SectionList, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';
-import { AppText, EmptyState, IconButton, ProgressBar, SectionTitle } from '@/components/ui';
+import { AppText, EmptyState, IconButton, SectionTitle } from '@/components/ui';
 import type { ShoppingItem } from '@/lib/database.types';
 import { CATEGORIES } from '@/lib/shopping';
 import { errorMessage } from '@/lib/supabase';
@@ -14,7 +15,54 @@ import { useHousehold } from '@/providers/HouseholdProvider';
 import { useShopping } from '@/providers/ShoppingProvider';
 import { colors, radius, shadow, space, type } from '@/theme';
 
-type Section = { key: string; title: string; data: ShoppingItem[]; done?: boolean };
+/** Pastille de couleur par rayon. */
+const CATEGORY_COLOR: Record<string, string> = {
+  'fruits-legumes': colors.lime,
+  boucherie: colors.coral,
+  cremerie: '#BDE3FF',
+  boulangerie: colors.sunSoft,
+  epicerie: colors.sun,
+  surgeles: '#A7E8FF',
+  boissons: colors.lagoon,
+  hygiene: '#F5B8E4',
+  maison: '#B9A8FF',
+  autre: colors.mute,
+};
+
+const SUGGESTION_COLORS = [colors.sun, colors.lagoon, colors.coral];
+
+type Section = { key: string; title: string; color: string; data: ShoppingItem[] };
+
+function ProgressRing({ done, total }: { done: number; total: number }) {
+  const size = 64;
+  const stroke = 8;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = total === 0 ? 0 : done / total;
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={`${done} articles sur ${total} dans le panier`}
+      style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.white} strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={colors.sun}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${c * pct} ${c}`}
+        />
+      </Svg>
+      <AppText variant="label" style={{ fontFamily: type.section.fontFamily, fontSize: 15 }}>
+        {done}/{total}
+      </AppText>
+    </View>
+  );
+}
 
 export default function CoursesScreen() {
   const insets = useSafeAreaInsets();
@@ -22,15 +70,16 @@ export default function CoursesScreen() {
   const { memberById } = useHousehold();
   const [draft, setDraft] = useState('');
 
-  const sections = useMemo<Section[]>(() => {
-    const groups: Section[] = CATEGORIES.map((c) => ({
-      key: c.id,
-      title: c.label,
-      data: toBuy.filter((i) => (CATEGORIES.some((x) => x.id === i.category) ? i.category : 'autre') === c.id),
-    })).filter((s) => s.data.length > 0);
-    if (inCart.length) groups.push({ key: 'cart', title: `Dans le panier · ${inCart.length}`, data: inCart, done: true });
-    return groups;
-  }, [toBuy, inCart]);
+  const sections = useMemo<Section[]>(
+    () =>
+      CATEGORIES.map((c) => ({
+        key: c.id,
+        title: c.label,
+        color: CATEGORY_COLOR[c.id] ?? colors.mute,
+        data: toBuy.filter((i) => (CATEGORIES.some((x) => x.id === i.category) ? i.category : 'autre') === c.id),
+      })).filter((s) => s.data.length > 0),
+    [toBuy],
+  );
 
   const allDone = items.length > 0 && toBuy.length === 0;
 
@@ -55,20 +104,35 @@ export default function CoursesScreen() {
       { text: 'Supprimer', style: 'destructive', onPress: safe(() => remove(item)) },
     ]);
 
+  const subtitle =
+    items.length === 0
+      ? 'Rien pour le moment'
+      : allDone
+        ? 'Tout est dans le panier'
+        : toBuy.length <= 3
+          ? `Plus que ${toBuy.length}, on y est presque`
+          : `Encore ${toBuy.length} articles à prendre`;
+
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: colors.ground }}>
       {/* En-tête */}
-      <View style={{ gap: space.lg, paddingTop: insets.top + space.xl, paddingHorizontal: space.lg, paddingBottom: space.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.lg }}>
-          <View style={{ gap: space.xs }}>
-            <AppText variant="title">Courses</AppText>
-            <AppText variant="caption" color={colors.ink3}>
-              {toBuy.length} à acheter · {inCart.length} dans le panier
-            </AppText>
-          </View>
-          <IconButton icon={ListFilter} label="Options de la liste" onPress={openOptions} />
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: space.lg,
+          paddingTop: insets.top + space.xl,
+          paddingHorizontal: space.lg,
+          paddingBottom: space.lg,
+        }}>
+        {items.length > 0 && <ProgressRing done={inCart.length} total={items.length} />}
+        <View style={{ flex: 1, gap: 2 }}>
+          <AppText variant="title">Courses</AppText>
+          <AppText variant="caption" color={colors.ink3}>
+            {subtitle}
+          </AppText>
         </View>
-        {items.length > 0 && <ProgressBar value={inCart.length / items.length} track={colors.line} />}
+        <IconButton icon={Ellipsis} label="Options de la liste" onPress={openOptions} />
       </View>
 
       <SectionList
@@ -76,38 +140,44 @@ export default function CoursesScreen() {
         keyExtractor={(i) => i.id}
         stickySectionHeadersEnabled={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.xl, flexGrow: 1 }}
+        contentContainerStyle={{ paddingHorizontal: space.lg, paddingBottom: space.xl, flexGrow: 1 }}
         ListHeaderComponent={
           allDone ? (
             <Animated.View
               entering={FadeInDown.springify()}
-              style={[
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: space.md,
-                  padding: space.lg,
-                  marginBottom: space.lg,
-                  borderRadius: radius.card,
-                  backgroundColor: colors.surface,
-                },
-                shadow.card,
-              ]}>
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: space.md,
+                padding: space.lg,
+                marginBottom: space.lg,
+                borderRadius: radius.card,
+                backgroundColor: colors.accent,
+                overflow: 'hidden',
+              }}>
               <View
+                pointerEvents="none"
+                style={{ position: 'absolute', right: -24, top: -24, width: 96, height: 96, borderRadius: 48, backgroundColor: colors.sun }}
+              />
+              <Animated.View
+                entering={ZoomIn.springify().delay(150)}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: colors.accentSoft,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 18,
+                  backgroundColor: colors.white,
                   alignItems: 'center',
                   justifyContent: 'center',
+                  transform: [{ rotate: '-8deg' }],
                 }}>
-                <Sparkles size={22} color={colors.accent} strokeWidth={1.8} />
-              </View>
+                <Sparkles size={24} color={colors.accent} strokeWidth={2.2} />
+              </Animated.View>
               <View style={{ flex: 1, gap: 2 }}>
-                <AppText variant="bodyStrong">Tout est dans le panier !</AppText>
-                <AppText variant="caption" color={colors.ink3}>
-                  Bien joué. On vide la liste ?
+                <AppText variant="section" color={colors.white}>
+                  Bien joué !
+                </AppText>
+                <AppText variant="caption" color={colors.white}>
+                  Tout est dans le panier.
                 </AppText>
               </View>
               <Pressable
@@ -117,9 +187,9 @@ export default function CoursesScreen() {
                   height: 40,
                   paddingHorizontal: space.lg,
                   borderRadius: radius.pill,
-                  backgroundColor: colors.accent,
+                  backgroundColor: colors.ink,
                   justifyContent: 'center',
-                  opacity: pressed ? 0.85 : 1,
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
                 })}>
                 <AppText variant="label" color={colors.white}>
                   Vider
@@ -129,44 +199,85 @@ export default function CoursesScreen() {
           ) : null
         }
         ListEmptyComponent={
-          <EmptyState
-            icon={ShoppingBag}
-            title="La liste est vide"
-            description="Ajoute un article ci-dessous : il apparaît aussitôt sur l'autre téléphone."
-          />
+          allDone ? null : (
+            <EmptyState
+              icon={ShoppingBag}
+              title="La liste est vide"
+              description="Ajoute un article ci-dessous : il apparaît aussitôt sur l'autre téléphone."
+            />
+          )
         }
         renderSectionHeader={({ section }) => (
-          <SectionTitle style={{ marginTop: space.lg, marginBottom: space.xs }}>{section.title}</SectionTitle>
+          <SectionTitle dot={section.color} count={section.data.length} style={{ marginTop: space.lg, marginBottom: space.sm }}>
+            {section.title}
+          </SectionTitle>
         )}
         renderItem={({ item, index, section }) => (
           <Row
             item={item}
             first={index === 0}
             last={index === section.data.length - 1}
-            done={!!section.done}
             adder={memberById(item.added_by)}
             onToggle={safe(() => toggle(item))}
             onLongPress={() => confirmRemove(item)}
           />
         )}
+        ListFooterComponent={
+          inCart.length > 0 ? (
+            <View style={{ gap: space.sm, marginTop: space.xl }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 10,
+                    backgroundColor: colors.accent,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Check size={16} color={colors.white} strokeWidth={3} />
+                </View>
+                <AppText variant="overline">Dans le panier</AppText>
+                <AppText variant="caption" color={colors.ink3}>
+                  {inCart.length}
+                </AppText>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+                {inCart.map((i) => (
+                  <Pressable
+                    key={i.id}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: true }}
+                    accessibilityLabel={`${i.name}, dans le panier. Toucher pour le remettre`}
+                    onPress={safe(() => toggle(i))}
+                    onLongPress={() => confirmRemove(i)}
+                    style={({ pressed }) => ({
+                      height: 36,
+                      paddingHorizontal: 14,
+                      borderRadius: 18,
+                      backgroundColor: colors.line,
+                      justifyContent: 'center',
+                      transform: [{ scale: pressed ? 0.95 : 1 }],
+                    })}>
+                    <AppText variant="label" color={colors.ink3} style={{ textDecorationLine: 'line-through' }}>
+                      {i.name}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null
+        }
       />
 
       {/* Ajout rapide, dans la zone du pouce */}
-      <View
-        style={{
-          gap: space.md,
-          paddingHorizontal: space.lg,
-          paddingVertical: space.md,
-          backgroundColor: colors.ground,
-          borderTopWidth: 1,
-          borderTopColor: colors.line,
-        }}>
+      <View style={{ gap: 10, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm, backgroundColor: colors.ground }}>
         {suggestions.length > 0 && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-            <AppText variant="caption" color={colors.ink3}>
-              Souvent :
+            <AppText variant="label" color={colors.ink3}>
+              Souvent
             </AppText>
-            {suggestions.map((s) => (
+            {suggestions.map((s, i) => (
               <Pressable
                 key={s}
                 accessibilityRole="button"
@@ -176,40 +287,39 @@ export default function CoursesScreen() {
                   height: 32,
                   paddingHorizontal: space.md,
                   borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: colors.line,
-                  backgroundColor: colors.surface,
+                  backgroundColor: SUGGESTION_COLORS[i % SUGGESTION_COLORS.length],
                   justifyContent: 'center',
-                  opacity: pressed ? 0.7 : 1,
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
                 })}>
-                <AppText variant="caption">+ {s}</AppText>
+                <AppText variant="label">+ {s}</AppText>
               </Pressable>
             ))}
           </View>
         )}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+        <View
+          style={[
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: space.sm,
+              paddingVertical: 6,
+              paddingRight: 6,
+              paddingLeft: 18,
+              borderRadius: 30,
+              backgroundColor: colors.surface,
+            },
+            shadow.float,
+          ]}>
           <TextInput
             value={draft}
             onChangeText={setDraft}
             onSubmitEditing={() => submit()}
             submitBehavior="submit"
             returnKeyType="done"
-            placeholder="Ajouter un article… (ex. 2 kg tomates)"
+            placeholder="Ajouter… (ex. 2 kg tomates)"
             placeholderTextColor={colors.ink3}
             accessibilityLabel="Ajouter un article"
-            style={[
-              type.body,
-              {
-                flex: 1,
-                height: 48,
-                paddingHorizontal: space.lg,
-                borderWidth: 1,
-                borderColor: colors.line,
-                borderRadius: 24,
-                backgroundColor: colors.surface,
-                color: colors.ink,
-              },
-            ]}
+            style={[type.body, { flex: 1, height: 48, color: colors.ink }]}
           />
           <IconButton icon={Plus} label="Ajouter" variant="primary" size={48} onPress={() => submit()} disabled={!draft.trim()} />
         </View>
@@ -222,7 +332,6 @@ function Row({
   item,
   first,
   last,
-  done,
   adder,
   onToggle,
   onLongPress,
@@ -230,7 +339,6 @@ function Row({
   item: ShoppingItem;
   first: boolean;
   last: boolean;
-  done: boolean;
   adder: ReturnType<ReturnType<typeof useHousehold>['memberById']>;
   onToggle: () => void;
   onLongPress: () => void;
@@ -243,55 +351,34 @@ function Row({
       accessibilityState={{ checked: item.checked }}
       accessibilityLabel={`${item.name}${item.quantity ? `, ${item.quantity}` : ''}`}
       accessibilityHint="Appui long pour supprimer"
-      style={({ pressed }) => [
-        {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: space.xs,
-          minHeight: 52,
-          paddingLeft: space.xs,
-          paddingRight: space.md,
-          backgroundColor: pressed ? '#FAFBF9' : colors.surface,
-          borderTopWidth: first ? 0 : 1,
-          borderTopColor: colors.lineSoft,
-          borderTopLeftRadius: first ? radius.card : 0,
-          borderTopRightRadius: first ? radius.card : 0,
-          borderBottomLeftRadius: last ? radius.card : 0,
-          borderBottomRightRadius: last ? radius.card : 0,
-          opacity: done ? 0.8 : 1,
-        },
-        first && last ? shadow.card : null,
-      ]}>
-      <View style={{ width: 44, height: 52, alignItems: 'center', justifyContent: 'center' }}>
-        {item.checked ? (
-          <View
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 11,
-              backgroundColor: colors.accent,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            <Check size={14} color={colors.white} strokeWidth={3} />
-          </View>
-        ) : (
-          <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.mute }} />
-        )}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+        minHeight: 56,
+        paddingLeft: space.xs,
+        paddingRight: space.md,
+        backgroundColor: pressed ? '#FBFAFF' : colors.surface,
+        borderTopWidth: first ? 0 : 1.5,
+        borderStyle: 'dashed',
+        borderTopColor: colors.lineSoft,
+        borderTopLeftRadius: first ? radius.tile : 0,
+        borderTopRightRadius: first ? radius.tile : 0,
+        borderBottomLeftRadius: last ? radius.tile : 0,
+        borderBottomRightRadius: last ? radius.tile : 0,
+      })}>
+      <View style={{ width: 48, height: 56, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2.5, borderColor: colors.mute }} />
       </View>
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: space.sm }}>
-        <AppText
-          color={done ? colors.ink3 : colors.ink}
-          style={done ? { textDecorationLine: 'line-through' } : undefined}>
-          {item.name}
-        </AppText>
+        <AppText variant="bodyStrong">{item.name}</AppText>
         {!!item.quantity && (
           <AppText variant="caption" color={colors.ink3}>
             {item.quantity}
           </AppText>
         )}
       </View>
-      {!done && adder && <Avatar member={adder} size={24} tone="soft" />}
+      {adder && <Avatar member={adder} size={26} />}
     </Pressable>
   );
 }

@@ -1,18 +1,16 @@
-import { House } from 'lucide-react-native';
+import { ArrowRight } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Card, Field, PrimaryButton, SecondaryButton } from '@/components/ui';
+import { BrandHero } from '@/components/BrandHero';
+import { AppText, Field, PrimaryButton, SecondaryButton } from '@/components/ui';
 import { errorMessage } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, shadow, space } from '@/theme';
+import { colors, space } from '@/theme';
 
 type Mode = 'signin' | 'signup';
 
 export default function ConnexionScreen() {
-  const insets = useSafeAreaInsets();
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
@@ -47,42 +45,8 @@ export default function ConnexionScreen() {
   };
 
   return (
-    <KeyboardAwareScrollView
-      bottomOffset={space.xl}
-      keyboardShouldPersistTaps="handled"
-      style={{ flex: 1, backgroundColor: colors.ground }}
-      contentContainerStyle={{
-        flexGrow: 1,
-        gap: space.xxl,
-        paddingTop: insets.top + 72,
-        paddingBottom: insets.bottom + space.xxl,
-        paddingHorizontal: space.xl,
-      }}>
-      <View style={{ gap: space.xl }}>
-        <View
-          accessibilityLabel="Logo MaCaz"
-          style={[
-            {
-              width: 64,
-              height: 64,
-              borderRadius: 20,
-              backgroundColor: colors.accent,
-              alignItems: 'center',
-              justifyContent: 'center',
-            },
-            shadow.primary,
-          ]}>
-          <House size={34} color={colors.white} strokeWidth={1.8} />
-        </View>
-        <View style={{ gap: space.sm }}>
-          <AppText variant="title">MaCaz</AppText>
-          <AppText color={colors.ink2}>
-            Nos courses, nos messages, notre agenda et nos papiers. Juste nous deux.
-          </AppText>
-        </View>
-      </View>
-
-      <View style={{ gap: space.lg }}>
+    <BrandHero title="MaCaz" subtitle="Courses, messages, agenda et papiers. Juste nous deux.">
+      <View style={{ gap: 14 }}>
         <Field
           label="Email"
           value={email}
@@ -105,38 +69,43 @@ export default function ConnexionScreen() {
           onSubmitEditing={submit}
         />
         {error && (
-          <AppText variant="caption" color={colors.danger} accessibilityLiveRegion="polite">
+          <AppText variant="label" color={colors.danger} accessibilityLiveRegion="polite">
             {error}
           </AppText>
         )}
         {info && (
-          <AppText variant="caption" color={colors.okFg} accessibilityLiveRegion="polite">
+          <AppText variant="label" color={colors.okFg} accessibilityLiveRegion="polite">
             {info}
           </AppText>
         )}
         <PrimaryButton
+          tone="ink"
+          icon={ArrowRight}
           label={mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}
           loading={busy}
           onPress={submit}
-          style={{ marginTop: space.sm }}
+          style={{ marginTop: 6 }}
         />
       </View>
 
-      <Card style={{ marginTop: 'auto', gap: space.md }}>
-        <AppText variant="bodyStrong">{mode === 'signin' ? 'Première fois ?' : 'Déjà un compte ?'}</AppText>
-        <AppText variant="caption" color={colors.ink3}>
-          {mode === 'signin'
-            ? 'Crée ton compte, puis crée le foyer ou rejoins-le avec le code à 6 caractères de ta moitié.'
-            : 'Connecte-toi avec ton email et ton mot de passe.'}
+      <View style={{ marginTop: 'auto', gap: 10, paddingTop: space.lg }}>
+        <AppText variant="label" color={colors.ink3} style={{ textAlign: 'center' }}>
+          {mode === 'signin' ? 'Première fois ?' : 'Déjà un compte ?'}
         </AppText>
         <SecondaryButton
+          bg={colors.sun}
           label={mode === 'signin' ? 'Créer un compte' : 'Se connecter'}
           onPress={() => {
             setMode(mode === 'signin' ? 'signup' : 'signin');
             setError(null);
           }}
         />
-      </Card>
-    </KeyboardAwareScrollView>
+        {mode === 'signin' && (
+          <AppText variant="caption" color={colors.ink3} style={{ textAlign: 'center' }}>
+            Ensuite : crée votre caz, ou rejoins-la avec le code de ta moitié.
+          </AppText>
+        )}
+      </View>
+    </BrandHero>
   );
 }

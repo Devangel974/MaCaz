@@ -10,12 +10,14 @@ import { AppText, EmptyState } from './ui';
 export function ComingSoon({
   title,
   icon,
+  tint,
   headline,
   description,
   features,
 }: {
   title: string;
   icon: LucideIcon;
+  tint: string;
   headline: string;
   description: string;
   features: string[];
@@ -26,14 +28,14 @@ export function ComingSoon({
       style={{ flex: 1, backgroundColor: colors.ground }}
       contentContainerStyle={{ paddingTop: insets.top + space.xl, paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.lg }}>
       <AppText variant="title">{title}</AppText>
-      <EmptyState icon={icon} title={headline} description={description} />
+      <EmptyState icon={icon} tint={tint} title={headline} description={description} />
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.card, padding: space.lg, gap: space.md }}>
-        <AppText variant="overline" color={colors.ink3}>
+        <AppText variant="section">
           Au programme
         </AppText>
         {features.map((f) => (
           <View key={f} style={{ flexDirection: 'row', gap: space.md, alignItems: 'flex-start' }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent, marginTop: 8 }} />
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tint, marginTop: 6 }} />
             <AppText color={colors.ink2} style={{ flex: 1 }}>
               {f}
             </AppText>

@@ -1,11 +1,13 @@
 import { FileText } from 'lucide-react-native';
 
 import { ComingSoon } from '@/components/ComingSoon';
+import { colors } from '@/theme';
 
 export default function DocumentsScreen() {
   return (
     <ComingSoon
       title="Documents"
+      tint={colors.coral}
       icon={FileText}
       headline="Le coffre à papiers arrive bientôt"
       description="Passeports, cartes d'identité, assurances : rangés, chiffrés et suivis."

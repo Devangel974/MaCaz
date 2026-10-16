@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
-import { CalendarDays, ChevronRight, Share2 } from 'lucide-react-native';
+import { CalendarDays, MessageSquare, Share2, ShoppingBag } from 'lucide-react-native';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar, AvatarPair } from '@/components/Avatar';
-import { AppText, Card, Chip, ProgressBar } from '@/components/ui';
+import { AvatarPair } from '@/components/Avatar';
+import { AppText, Card, Chip, SegmentBar } from '@/components/ui';
 import { formatTime, formatToday, greeting } from '@/lib/dates';
 import { preview } from '@/lib/messages';
 import { useChat } from '@/providers/ChatProvider';
@@ -12,32 +12,38 @@ import { useHousehold } from '@/providers/HouseholdProvider';
 import { useShopping } from '@/providers/ShoppingProvider';
 import { colors, radius, space } from '@/theme';
 
+function IconTile({ icon: Icon, bg, color }: { icon: typeof ShoppingBag; bg: string; color: string }) {
+  return (
+    <View style={{ width: 32, height: 32, borderRadius: 12, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon size={18} color={color} strokeWidth={2.2} />
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { me, partner, members, household, memberById } = useHousehold();
-  const { items, toBuy } = useShopping();
+  const { items, toBuy, inCart } = useShopping();
   const { lastMessage, unreadCount } = useChat();
 
   const total = items.length;
-  const done = total - toBuy.length;
+  const salut = greeting() === 'Bonsoir' ? 'Bonsoir' : 'Salut';
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.ground }}
       contentContainerStyle={{
-        gap: space.xl,
+        gap: space.lg,
         paddingTop: insets.top + space.xl,
         paddingBottom: space.xl,
         paddingHorizontal: space.lg,
       }}>
       {/* En-tête */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.lg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md }}>
         <View style={{ gap: space.xs, flex: 1 }}>
-          <AppText variant="caption" color={colors.ink3}>
-            {formatToday()}
-          </AppText>
+          <Chip label={formatToday()} color={colors.ink3} style={{ alignSelf: 'flex-start', paddingVertical: space.xs }} />
           <AppText variant="title" numberOfLines={1}>
-            {greeting()} {me?.display_name}
+            {salut} {me?.display_name}
           </AppText>
         </View>
         <Pressable
@@ -45,25 +51,31 @@ export default function HomeScreen() {
           accessibilityLabel="Réglages du foyer"
           onPress={() => router.push('/foyer')}
           hitSlop={8}
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, padding: space.xs })}>
+          style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}>
           <AvatarPair members={members} />
         </Pressable>
       </View>
 
       {/* Invitation tant que le foyer n'a qu'un membre */}
       {!partner && household && (
-        <Card style={{ gap: space.md, backgroundColor: colors.accentSoft, boxShadow: undefined }}>
-          <AppText variant="bodyStrong">Invite ta moitié</AppText>
-          <AppText variant="caption" color={colors.ink2}>
+        <Card bg={colors.accent} style={{ gap: space.md }}>
+          <View
+            pointerEvents="none"
+            style={{ position: 'absolute', right: -30, top: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: colors.sun }}
+          />
+          <AppText variant="section" color={colors.white}>
+            Invite ta moitié
+          </AppText>
+          <AppText variant="caption" color={colors.white} style={{ maxWidth: 230 }}>
             Après avoir créé son compte, elle choisit « J&apos;ai un code » et saisit :
           </AppText>
-          <AppText variant="title" style={{ letterSpacing: 6 }} selectable>
+          <AppText variant="hero" color={colors.white} style={{ letterSpacing: 6, fontSize: 40, lineHeight: 44 }} selectable>
             {household.invite_code}
           </AppText>
           <Pressable
             accessibilityRole="button"
             onPress={() =>
-              Share.share({ message: `Rejoins notre foyer dans l'appli MaCaz avec le code ${household.invite_code}` })
+              Share.share({ message: `Rejoins notre caz dans l'appli MaCaz avec le code ${household.invite_code}` })
             }
             style={({ pressed }) => ({
               alignSelf: 'flex-start',
@@ -73,10 +85,10 @@ export default function HomeScreen() {
               height: 40,
               paddingHorizontal: space.lg,
               borderRadius: radius.pill,
-              backgroundColor: colors.surface,
-              opacity: pressed ? 0.8 : 1,
+              backgroundColor: colors.white,
+              transform: [{ scale: pressed ? 0.96 : 1 }],
             })}>
-            <Share2 size={16} color={colors.accent} strokeWidth={2} />
+            <Share2 size={16} color={colors.accent} strokeWidth={2.4} />
             <AppText variant="label" color={colors.accent}>
               Partager le code
             </AppText>
@@ -84,107 +96,78 @@ export default function HomeScreen() {
         </Card>
       )}
 
-      {/* Courses */}
-      <Card onPress={() => router.navigate('/courses')} accessibilityLabel="Ouvrir la liste de courses" style={{ gap: space.lg }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md }}>
-          <View style={{ gap: 2 }}>
-            <AppText variant="section">Liste de courses</AppText>
-            <AppText variant="caption" color={colors.ink3}>
-              {total === 0
-                ? 'La liste est vide'
-                : toBuy.length === 0
-                  ? 'Tout est dans le panier'
-                  : `${toBuy.length} article${toBuy.length > 1 ? 's' : ''} restant${toBuy.length > 1 ? 's' : ''} sur ${total}`}
-            </AppText>
+      {/* Courses — grand bloc tournesol */}
+      <Card bg={colors.sun} onPress={() => router.navigate('/courses')} accessibilityLabel="Ouvrir la liste de courses" style={{ gap: space.md, padding: 20 }}>
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', right: -28, top: -28, width: 120, height: 120, borderRadius: 60, backgroundColor: colors.sunDeep }}
+        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+            <IconTile icon={ShoppingBag} bg={colors.ink} color={colors.sun} />
+            <AppText variant="bodyStrong">Courses</AppText>
           </View>
-          <AppText variant="label" color={colors.accent}>
-            {total === 0 ? 'Ajouter' : 'Ouvrir'}
-          </AppText>
+          <Chip label={total === 0 ? 'Ajouter' : 'Ouvrir'} bg={colors.ink} color={colors.white} />
         </View>
-        {total > 0 && <ProgressBar value={done / total} />}
+        {total === 0 ? (
+          <AppText variant="section">La liste est vide</AppText>
+        ) : toBuy.length === 0 ? (
+          <AppText variant="section">Tout est dans le panier !</AppText>
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space.sm }}>
+            <AppText variant="hero">{toBuy.length}</AppText>
+            <AppText variant="bodyStrong">article{toBuy.length > 1 ? 's' : ''} à prendre</AppText>
+          </View>
+        )}
+        {total > 0 && <SegmentBar done={inCart.length} total={total} />}
         {toBuy.length > 0 && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
             {toBuy.slice(0, 3).map((i) => (
               <Chip key={i.id} label={i.name} />
             ))}
-            {toBuy.length > 3 && <Chip label={`+${toBuy.length - 3}`} muted />}
+            {toBuy.length > 3 && <Chip label={`+${toBuy.length - 3}`} bg={colors.sunSoft} />}
           </View>
         )}
       </Card>
 
-      {/* Dernier message */}
-      <Card
-        onPress={() => router.navigate('/chat')}
-        accessibilityLabel="Ouvrir le chat"
-        style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-        {lastMessage ? (
-          <>
-            <Avatar member={memberById(lastMessage.sender_id)} size={40} />
-            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.sm }}>
-                <AppText variant="bodyStrong">{memberById(lastMessage.sender_id)?.display_name ?? 'MaCaz'}</AppText>
-                <AppText variant="caption" color={colors.ink3} style={{ fontVariant: ['tabular-nums'] }}>
-                  {formatTime(lastMessage.created_at)}
-                </AppText>
-              </View>
-              <AppText color={colors.ink2} numberOfLines={1}>
+      <View style={{ flexDirection: 'row', gap: space.md }}>
+        {/* Chat — bloc violet */}
+        <Card
+          bg={colors.accent}
+          onPress={() => router.navigate('/chat')}
+          accessibilityLabel={unreadCount > 0 ? `Chat, ${unreadCount} non lu` : 'Ouvrir le chat'}
+          style={{ flex: 1, minHeight: 176, justifyContent: 'space-between', gap: space.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <IconTile icon={MessageSquare} bg={colors.white} color={colors.accent} />
+            {unreadCount > 0 && <Chip label={String(unreadCount)} bg={colors.sun} style={{ paddingVertical: 3, paddingHorizontal: 9 }} />}
+          </View>
+          {lastMessage ? (
+            <View style={{ gap: space.xs }}>
+              <AppText variant="label" color={colors.white}>
+                {memberById(lastMessage.sender_id)?.display_name ?? 'MaCaz'} · {formatTime(lastMessage.created_at)}
+              </AppText>
+              <AppText color={colors.white} numberOfLines={3}>
                 {preview(lastMessage)}
               </AppText>
             </View>
-            {unreadCount > 0 && (
-              <View
-                style={{
-                  minWidth: 20,
-                  height: 20,
-                  paddingHorizontal: 6,
-                  borderRadius: 10,
-                  backgroundColor: colors.accent,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <AppText variant="label" color={colors.white} style={{ fontSize: 12, lineHeight: 16 }}>
-                  {unreadCount}
-                </AppText>
-              </View>
-            )}
-          </>
-        ) : (
-          <View style={{ flex: 1, gap: 2 }}>
-            <AppText variant="section">Chat du foyer</AppText>
-            <AppText variant="caption" color={colors.ink3}>
-              Aucun message pour l&apos;instant
-            </AppText>
-          </View>
-        )}
-      </Card>
+          ) : (
+            <AppText color={colors.white}>Pas encore de message</AppText>
+          )}
+        </Card>
 
-      {/* Agenda — étape suivante */}
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.navigate('/agenda')}
-        style={({ pressed }) => ({
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: space.md,
-          padding: space.lg,
-          borderRadius: radius.card,
-          borderWidth: 1,
-          borderStyle: 'dashed',
-          borderColor: colors.mute,
-          opacity: pressed ? 0.7 : 1,
-        })}>
-        <CalendarDays size={20} color={colors.ink3} strokeWidth={1.8} />
-        <View style={{ flex: 1 }}>
-          <AppText variant="bodyStrong" color={colors.ink2}>
-            Agenda partagé
-          </AppText>
-          <AppText variant="caption" color={colors.ink3}>
-            Arrive dans la prochaine version
-          </AppText>
-        </View>
-        <ChevronRight size={20} color={colors.ink3} strokeWidth={1.8} />
-      </Pressable>
+        {/* Agenda — bloc lagon (bientôt) */}
+        <Card
+          bg={colors.lagoon}
+          onPress={() => router.navigate('/agenda')}
+          accessibilityLabel="Agenda partagé, bientôt"
+          style={{ flex: 1, minHeight: 176, justifyContent: 'space-between', gap: space.lg }}>
+          <IconTile icon={CalendarDays} bg={colors.ink} color={colors.lagoon} />
+          <View style={{ gap: space.xs }}>
+            <AppText variant="label">Bientôt</AppText>
+            <AppText>L&apos;agenda à deux arrive</AppText>
+          </View>
+        </Card>
+      </View>
     </ScrollView>
   );
 }
-

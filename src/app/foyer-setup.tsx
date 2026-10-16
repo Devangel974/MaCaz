@@ -1,18 +1,16 @@
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandHero } from '@/components/BrandHero';
 import { AppText, Field, PrimaryButton } from '@/components/ui';
 import { errorMessage } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { useHousehold } from '@/providers/HouseholdProvider';
-import { colors, radius, space, type } from '@/theme';
+import { colors, space, type } from '@/theme';
 
 type Choice = 'create' | 'join';
 
 export default function FoyerSetupScreen() {
-  const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const { createHousehold, joinHousehold } = useHousehold();
   const [choice, setChoice] = useState<Choice>('create');
@@ -37,36 +35,21 @@ export default function FoyerSetupScreen() {
   };
 
   return (
-    <KeyboardAwareScrollView
-      bottomOffset={space.xl}
-      keyboardShouldPersistTaps="handled"
-      style={{ flex: 1, backgroundColor: colors.ground }}
-      contentContainerStyle={{
-        flexGrow: 1,
-        gap: space.xxl,
-        paddingTop: insets.top + 72,
-        paddingBottom: insets.bottom + space.xxl,
-        paddingHorizontal: space.xl,
-      }}>
-      <View style={{ gap: space.sm }}>
-        <AppText variant="title">Votre foyer</AppText>
-        <AppText color={colors.ink2}>
-          Le premier crée le foyer et reçoit un code. L&apos;autre le rejoint avec ce code.
-        </AppText>
-      </View>
-
+    <BrandHero
+      title="Votre caz"
+      subtitle="Le premier crée la caz et reçoit un code. L'autre la rejoint avec ce code.">
       <View
         accessibilityRole="tablist"
         style={{
           flexDirection: 'row',
           gap: space.xs,
           padding: space.xs,
-          borderRadius: radius.field,
-          backgroundColor: colors.line,
+          borderRadius: 22,
+          backgroundColor: colors.ground,
         }}>
         {(
           [
-            ['create', 'Créer notre foyer'],
+            ['create', 'Créer notre caz'],
             ['join', "J'ai un code"],
           ] as const
         ).map(([id, label]) => {
@@ -79,14 +62,13 @@ export default function FoyerSetupScreen() {
               onPress={() => setChoice(id)}
               style={{
                 flex: 1,
-                height: 44,
-                borderRadius: 12,
+                height: 48,
+                borderRadius: 18,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: selected ? colors.surface : 'transparent',
-                boxShadow: selected ? '0 1px 2px rgba(22,32,30,0.08)' : undefined,
+                backgroundColor: selected ? (id === 'create' ? colors.sun : colors.lagoon) : 'transparent',
               }}>
-              <AppText variant={selected ? 'label' : 'caption'} color={selected ? colors.ink : colors.ink2}>
+              <AppText variant="label" color={selected ? colors.ink : colors.ink3}>
                 {label}
               </AppText>
             </Pressable>
@@ -106,7 +88,7 @@ export default function FoyerSetupScreen() {
         />
         {choice === 'join' && (
           <Field
-            label="Code du foyer"
+            label="Code de la caz"
             value={code}
             onChangeText={(t) => setCode(t.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
             placeholder="K7M2QX"
@@ -117,12 +99,13 @@ export default function FoyerSetupScreen() {
           />
         )}
         {error && (
-          <AppText variant="caption" color={colors.danger} accessibilityLiveRegion="polite">
+          <AppText variant="label" color={colors.danger} accessibilityLiveRegion="polite">
             {error}
           </AppText>
         )}
         <PrimaryButton
-          label={choice === 'create' ? 'Créer le foyer' : 'Rejoindre le foyer'}
+          tone="ink"
+          label={choice === 'create' ? 'Créer la caz' : 'Rejoindre la caz'}
           loading={busy}
           onPress={submit}
           style={{ marginTop: space.sm }}
@@ -137,6 +120,6 @@ export default function FoyerSetupScreen() {
           Se déconnecter
         </AppText>
       </Pressable>
-    </KeyboardAwareScrollView>
+    </BrandHero>
   );
 }

@@ -1,11 +1,13 @@
 import { CalendarDays } from 'lucide-react-native';
 
 import { ComingSoon } from '@/components/ComingSoon';
+import { colors } from '@/theme';
 
 export default function AgendaScreen() {
   return (
     <ComingSoon
       title="Agenda"
+      tint={colors.lagoon}
       icon={CalendarDays}
       headline="L'agenda partagé arrive bientôt"
       description="C'est la prochaine étape, juste après la liste de courses et le chat."

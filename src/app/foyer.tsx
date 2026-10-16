@@ -44,12 +44,12 @@ export default function FoyerScreen() {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ paddingTop: insets.top + space.lg, paddingBottom: insets.bottom + space.xxl, paddingHorizontal: space.lg, gap: space.xl }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <AppText variant="title">Notre foyer</AppText>
+        <AppText variant="title">Notre caz</AppText>
         <IconButton icon={X} label="Fermer" onPress={() => router.back()} />
       </View>
 
       <Field
-        label="Nom du foyer"
+        label="Nom de la caz"
         value={name}
         onChangeText={setName}
         onEndEditing={saveName}
@@ -77,8 +77,8 @@ export default function FoyerScreen() {
                   {m.display_name}
                   {m.user_id === me.user_id ? ' (toi)' : ''}
                 </AppText>
-                <AppText variant="caption" color={personColors[m.color].solid}>
-                  {m.color === 'blue' ? 'Bleu' : 'Orange'} dans l&apos;appli
+                <AppText variant="caption" color={colors.ink3}>
+                  {personColors[m.color].label} dans l&apos;appli
                 </AppText>
               </View>
             </View>
@@ -95,13 +95,13 @@ export default function FoyerScreen() {
           <SecondaryButton
             label="Partager le code"
             onPress={() =>
-              Share.share({ message: `Rejoins notre foyer dans l'appli MaCaz avec le code ${household.invite_code}` })
+              Share.share({ message: `Rejoins notre caz dans l'appli MaCaz avec le code ${household.invite_code}` })
             }
           />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
             <Share2 size={14} color={colors.ink3} />
             <AppText variant="caption" color={colors.ink3}>
-              Le foyer accepte 2 membres au total.
+              La caz accepte 2 membres au total.
             </AppText>
           </View>
         </Card>
@@ -112,7 +112,7 @@ export default function FoyerScreen() {
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
           <Bell size={22} color={colors.ink} strokeWidth={1.8} />
           <View style={{ flex: 1 }}>
-            <AppText variant="bodyStrong">Messages du foyer</AppText>
+            <AppText variant="bodyStrong">Messages de la caz</AppText>
             <AppText variant="caption" color={pushState === 'off' ? colors.danger : colors.ink3}>
               {pushState === 'ok'
                 ? 'Activées sur ce téléphone'

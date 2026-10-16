@@ -10,7 +10,7 @@ import {
 import { type ComponentProps, useEffect, useState } from 'react';
 import { Keyboard, Pressable, View } from 'react-native';
 
-import { colors, space } from '@/theme';
+import { colors, shadow, space } from '@/theme';
 
 import { AppText } from './ui';
 
@@ -24,72 +24,87 @@ const TABS: Record<string, { label: string; icon: LucideIcon }> = {
   documents: { label: 'Documents', icon: FileText },
 };
 
-/** Barre d'onglets Material 3 (pilule sur l'onglet actif), conforme aux maquettes. */
+/** Barre d'onglets flottante : pilule encre, onglet actif en pilule violette avec son nom. */
 export function TabBar({ state, descriptors, navigation, insets, badges }: TabBarProps & { badges?: Record<string, boolean> }) {
   const keyboardOpen = useKeyboardOpen();
   if (keyboardOpen) return null;
 
   return (
     <View
-      accessibilityRole="tablist"
       style={{
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingTop: space.sm,
-        paddingBottom: Math.max(insets.bottom, space.lg),
-        paddingHorizontal: space.xs,
-        backgroundColor: colors.surface,
-        borderTopWidth: 1,
-        borderTopColor: colors.line,
+        backgroundColor: colors.ground,
+        paddingHorizontal: space.md,
+        paddingTop: space.xs,
+        paddingBottom: Math.max(insets.bottom, space.md) + space.xs,
       }}>
-      {state.routes.map((route, index) => {
-        const tab = TABS[route.name];
-        if (!tab) return null;
-        const focused = state.index === index;
-        const Icon = tab.icon;
-        const { options } = descriptors[route.key];
-        const onPress = () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
-        };
-        return (
-          <Pressable
-            key={route.key}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: focused }}
-            accessibilityLabel={options.tabBarAccessibilityLabel ?? tab.label}
-            onPress={onPress}
-            style={{ alignItems: 'center', gap: space.xs, width: 76, paddingTop: space.xs }}>
-            <View
-              style={{
-                width: 56,
-                height: 32,
-                borderRadius: 16,
+      <View
+        accessibilityRole="tablist"
+        style={[
+          {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            padding: space.sm,
+            borderRadius: 32,
+            backgroundColor: colors.ink,
+          },
+          shadow.nav,
+        ]}>
+        {state.routes.map((route, index) => {
+          const tab = TABS[route.name];
+          if (!tab) return null;
+          const focused = state.index === index;
+          const Icon = tab.icon;
+          const { options } = descriptors[route.key];
+          const onPress = () => {
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+          };
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={options.tabBarAccessibilityLabel ?? tab.label}
+              onPress={onPress}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: focused ? colors.accentSoft : 'transparent',
-              }}>
-              <Icon size={22} strokeWidth={1.8} color={focused ? colors.accent : colors.ink3} />
-              {badges?.[route.name] && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 2,
-                    right: 12,
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: '#B8512A',
-                  }}
-                />
+                gap: 6,
+                height: 48,
+                minWidth: 48,
+                paddingHorizontal: focused ? space.lg : 0,
+                borderRadius: 24,
+                backgroundColor: focused ? colors.accent : 'transparent',
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              })}>
+              <View>
+                <Icon size={22} strokeWidth={2} color={focused ? colors.white : colors.navInactive} />
+                {badges?.[route.name] && !focused && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: -3,
+                      right: -4,
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor: colors.sun,
+                      borderWidth: 2,
+                      borderColor: colors.ink,
+                    }}
+                  />
+                )}
+              </View>
+              {focused && (
+                <AppText variant="label" color={colors.white}>
+                  {tab.label}
+                </AppText>
               )}
-            </View>
-            <AppText variant={focused ? 'label' : 'caption'} color={focused ? colors.ink : colors.ink3}>
-              {tab.label}
-            </AppText>
-          </Pressable>
-        );
-      })}
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }

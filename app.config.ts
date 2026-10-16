@@ -7,7 +7,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 const ANDROID_PACKAGE = 'com.famille.macaz';
 
 // Identifiant du projet EAS : affiché par `npx eas-cli@latest init` — colle-le ici.
-const EAS_PROJECT_ID = '';
+const EAS_PROJECT_ID = 'a7bdc9b2-4012-41f4-9325-f708ccb7ce2a';
 
 // Fichier Firebase nécessaire au push Android (FCM). En build EAS, on le passe en variable
 // d'environnement de type "fichier" (GOOGLE_SERVICES_JSON) pour ne pas le committer.
@@ -61,6 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     typedRoutes: true,
     reactCompiler: true,
   },
+  owner: 'ludovic974s-team',
   extra: {
     ...config.extra,
     eas: {

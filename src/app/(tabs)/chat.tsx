@@ -61,14 +61,17 @@ export default function ChatScreen() {
           alignItems: 'center',
           gap: space.md,
           paddingTop: insets.top + space.lg,
-          paddingBottom: space.md,
+          paddingBottom: 20,
           paddingHorizontal: space.lg,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.line,
+          backgroundColor: colors.accent,
+          borderBottomLeftRadius: 32,
+          borderBottomRightRadius: 32,
         }}>
-        <AvatarPair members={members} size={36} />
+        <AvatarPair members={members} size={44} ring={colors.accent} />
         <View style={{ flex: 1, gap: 2 }}>
-          <AppText variant="section">{household?.name ?? 'Notre foyer'}</AppText>
+          <AppText variant="section" color={colors.white} style={{ fontSize: 24, lineHeight: 28 }}>
+            {household?.name ?? 'Notre caz'}
+          </AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {partner && (
               <View
@@ -76,11 +79,11 @@ export default function ChatScreen() {
                   width: 8,
                   height: 8,
                   borderRadius: 4,
-                  backgroundColor: partnerOnline ? colors.online : colors.mute,
+                  backgroundColor: partnerOnline ? colors.online : colors.navInactive,
                 }}
               />
             )}
-            <AppText variant="caption" color={colors.ink3}>
+            <AppText variant="caption" color={colors.white}>
               {!partner
                 ? 'En attente de ta moitié'
                 : partnerTyping
@@ -98,6 +101,7 @@ export default function ChatScreen() {
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <EmptyState
             icon={MessageSquare}
+            tint={colors.accent}
             title="Votre fil à deux"
             description="Messages, et ajouts à la liste de courses : tout se retrouve ici."
           />
@@ -143,14 +147,19 @@ export default function ChatScreen() {
 
       {/* Zone de saisie */}
       <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'flex-end',
-          gap: space.sm,
-          paddingHorizontal: space.lg,
-          paddingVertical: space.md,
-          backgroundColor: colors.ground,
-        }}>
+        style={[
+          {
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            gap: space.sm,
+            marginHorizontal: space.lg,
+            marginVertical: space.sm,
+            padding: 6,
+            borderRadius: 30,
+            backgroundColor: colors.surface,
+          },
+          shadow.float,
+        ]}>
         <TextInput
           value={draft}
           onChangeText={(t) => {
@@ -167,13 +176,9 @@ export default function ChatScreen() {
               flex: 1,
               minHeight: 48,
               maxHeight: 120,
-              paddingHorizontal: space.lg,
+              paddingHorizontal: space.md,
               paddingTop: 13,
               paddingBottom: 13,
-              borderWidth: 1,
-              borderColor: colors.line,
-              borderRadius: 24,
-              backgroundColor: colors.surface,
               color: colors.ink,
               textAlignVertical: 'center',
             },
@@ -192,11 +197,11 @@ function DaySeparator({ iso }: { iso: string }) {
         alignSelf: 'center',
         paddingHorizontal: space.md,
         paddingVertical: space.xs,
-        borderRadius: space.md,
-        backgroundColor: colors.line,
+        borderRadius: radius.pill,
+        backgroundColor: colors.surface,
         marginVertical: space.sm,
       }}>
-      <AppText variant="caption" color={colors.ink2}>
+      <AppText variant="label" color={colors.ink3}>
         {formatDayLabel(iso)}
       </AppText>
     </View>
@@ -221,12 +226,11 @@ function Bubble({
           {
             paddingHorizontal: space.lg,
             paddingVertical: space.md,
-            borderRadius: radius.card,
+            borderRadius: 22,
             backgroundColor: mine ? colors.accent : colors.surface,
             opacity: message.pending ? 0.7 : 1,
           },
           mine ? { borderBottomRightRadius: 6 } : { borderBottomLeftRadius: 6 },
-          !mine && shadow.soft,
         ]}>
         <AppText color={mine ? colors.white : colors.ink} selectable>
           {message.body}
@@ -238,7 +242,7 @@ function Bubble({
             {message.pending ? 'Envoi…' : formatTime(message.created_at)}
             {receipt && !message.pending ? ` · ${receipt}` : ''}
           </AppText>
-          {receipt === 'Lu' && !message.pending && <CheckCheck size={16} color={colors.accent} strokeWidth={2} />}
+          {receipt === 'Lu' && !message.pending && <CheckCheck size={16} color={colors.accent} strokeWidth={2.4} />}
         </View>
       )}
     </View>
@@ -256,40 +260,42 @@ function ItemsCard({ message, author, mine }: { message: ChatMessage; author: Me
       style={({ pressed }) => [
         {
           alignSelf: mine ? 'flex-end' : 'flex-start',
-          width: '78%',
-          gap: space.md,
-          padding: space.lg,
-          borderRadius: radius.card,
-          backgroundColor: colors.surface,
-          opacity: pressed ? 0.85 : 1,
+          width: '80%',
+          gap: 10,
+          paddingHorizontal: space.lg,
+          paddingVertical: 14,
+          borderRadius: 22,
+          backgroundColor: colors.sun,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
         mine ? { borderBottomRightRadius: 6 } : { borderBottomLeftRadius: 6 },
-        shadow.soft,
       ]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-        <ShoppingBag size={16} color={colors.ink3} strokeWidth={1.8} />
-        <AppText variant="caption" color={colors.ink3} style={{ flex: 1 }}>
+        <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>
+          <ShoppingBag size={15} color={colors.sun} strokeWidth={2.4} />
+        </View>
+        <AppText variant="label" style={{ flex: 1 }}>
           {who} ajouté {items.length > 1 ? `${items.length} articles` : '1 article'}
         </AppText>
-        <AppText variant="caption" color={colors.ink3} style={{ fontVariant: ['tabular-nums'] }}>
+        <AppText variant="caption" style={{ fontVariant: ['tabular-nums'] }}>
           {formatTime(message.created_at)}
         </AppText>
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {items.slice(0, 8).map((name, i) => (
-          <View key={name + i} style={{ paddingHorizontal: 10, paddingVertical: space.xs, borderRadius: radius.chip, backgroundColor: colors.ground }}>
-            <AppText variant="caption">{name}</AppText>
+          <View key={name + i} style={{ paddingHorizontal: 10, paddingVertical: space.xs, borderRadius: radius.chip, backgroundColor: colors.white }}>
+            <AppText variant="label">{name}</AppText>
           </View>
         ))}
         {items.length > 8 && (
-          <View style={{ paddingHorizontal: 10, paddingVertical: space.xs, borderRadius: radius.chip, backgroundColor: colors.ground }}>
-            <AppText variant="caption" color={colors.ink3}>
+          <View style={{ paddingHorizontal: 10, paddingVertical: space.xs, borderRadius: radius.chip, backgroundColor: colors.sunSoft }}>
+            <AppText variant="label">
               +{items.length - 8}
             </AppText>
           </View>
         )}
       </View>
-      <AppText variant="label" color={colors.accent}>
+      <AppText variant="label" style={{ textDecorationLine: 'underline' }}>
         Voir la liste
       </AppText>
     </Pressable>
@@ -303,15 +309,15 @@ function TypingBubble() {
       style={{
         alignSelf: 'flex-start',
         flexDirection: 'row',
-        gap: space.xs,
+        gap: 5,
         paddingHorizontal: space.lg,
-        paddingVertical: space.md,
-        borderRadius: radius.card,
+        paddingVertical: 14,
+        borderRadius: 22,
         backgroundColor: colors.surface,
         marginTop: space.sm,
       }}>
-      {[colors.mute, '#7E8784', colors.mute].map((c, i) => (
-        <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c }} />
+      {[colors.coral, colors.sun, colors.lagoon].map((c, i) => (
+        <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c }} />
       ))}
     </View>
   );
