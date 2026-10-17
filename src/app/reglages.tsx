@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Bell, CalendarDays, FileText, LogOut, Share2, ShoppingBag, X, type LucideIcon } from 'lucide-react-native';
+import { Bell, CalendarDays, FileText, LogOut, Share2, ShoppingBag, Wallet, X, type LucideIcon } from 'lucide-react-native';
 import { type ReactNode, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -142,6 +142,15 @@ export default function ReglagesScreen() {
             description="Une carte quand un papier est ajouté, et quand il arrive à expiration."
             value={household.chat_show_documents}
             onChange={(v) => saveHousehold({ chat_show_documents: v })}
+            divider
+          />
+          <ToggleRow
+            icon={Wallet}
+            tint={colors.lime}
+            title="Budget"
+            description="Une carte quand l'un de vous note une dépense ou un revenu (pas pour les opérations automatiques)."
+            value={household.chat_show_budget}
+            onChange={(v) => saveHousehold({ chat_show_budget: v })}
             divider
           />
         </Card>

@@ -5,7 +5,31 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type MemberColor = 'blue' | 'orange';
-export type MessageKind = 'text' | 'items_added' | 'event_added' | 'document_added' | 'document_expiring';
+export type MessageKind = 'text' | 'items_added' | 'event_added' | 'document_added' | 'document_expiring' | 'expense_added';
+export type OperationKind = 'expense' | 'income';
+export type BudgetCategory =
+  | 'courses'
+  | 'logement'
+  | 'factures'
+  | 'transport'
+  | 'sorties'
+  | 'sante'
+  | 'abonnements'
+  | 'shopping'
+  | 'autre'
+  | 'salaire'
+  | 'aides'
+  | 'remboursement'
+  | 'autre_revenu';
+
+type BudgetFields = {
+  kind: OperationKind;
+  amount_cents: number;
+  label: string;
+  category: BudgetCategory;
+  paid_by: string | null;
+  notes: string | null;
+};
 export type DocType = 'passeport' | 'identite' | 'permis' | 'vitale' | 'assurance' | 'carte_grise' | 'autre';
 
 type HouseholdRow = {
@@ -15,6 +39,7 @@ type HouseholdRow = {
   chat_show_shopping: boolean;
   chat_show_events: boolean;
   chat_show_documents: boolean;
+  chat_show_budget: boolean;
   created_by: string | null;
   created_at: string;
 };
@@ -30,6 +55,7 @@ export type Database = {
           chat_show_shopping?: boolean;
           chat_show_events?: boolean;
           chat_show_documents?: boolean;
+          chat_show_budget?: boolean;
         };
         Relationships: [];
       };
@@ -80,6 +106,46 @@ export type Database = {
           checked?: boolean;
           archived_at?: string | null;
         };
+        Relationships: [];
+      };
+      budget_operations: {
+        Row: BudgetFields & {
+          id: string;
+          household_id: string;
+          op_date: string;
+          recurring_id: string | null;
+          recurring_month: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<BudgetFields> &
+          Pick<BudgetFields, 'amount_cents' | 'label' | 'category'> & {
+            household_id: string;
+            op_date?: string;
+          };
+        Update: Partial<BudgetFields> & { op_date?: string; recurring_id?: string | null; recurring_month?: string | null };
+        Relationships: [];
+      };
+      budget_recurring: {
+        Row: BudgetFields & {
+          id: string;
+          household_id: string;
+          day_of_month: number;
+          next_month: string;
+          active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<BudgetFields> &
+          Pick<BudgetFields, 'amount_cents' | 'label' | 'category'> & {
+            household_id: string;
+            day_of_month: number;
+            next_month: string;
+            active?: boolean;
+          };
+        Update: Partial<BudgetFields> & { day_of_month?: number; next_month?: string; active?: boolean };
         Relationships: [];
       };
       documents: {
@@ -200,6 +266,10 @@ export type Database = {
         Args: { p_code: string; p_display_name: string };
         Returns: HouseholdRow;
       };
+      apply_recurring: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
       check_document_alerts: {
         Args: Record<PropertyKey, never>;
         Returns: number;
@@ -223,4 +293,6 @@ export type Message = PublicTables['messages']['Row'];
 export type CalendarEvent = PublicTables['events']['Row'];
 export type HouseDocument = PublicTables['documents']['Row'];
 export type HouseDocumentUpdate = PublicTables['documents']['Update'];
+export type BudgetOperation = PublicTables['budget_operations']['Row'];
+export type BudgetRecurring = PublicTables['budget_recurring']['Row'];
 export type CalendarEventInput = Omit<PublicTables['events']['Insert'], 'household_id' | 'id'>;

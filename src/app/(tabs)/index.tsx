@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { CalendarDays, FileText, MessageSquare, Settings, Share2, ShoppingBag } from 'lucide-react-native';
+import { CalendarDays, FileText, MessageSquare, Plus, Settings, Share2, ShoppingBag, Wallet } from 'lucide-react-native';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,8 +7,10 @@ import { AvatarPair } from '@/components/Avatar';
 import { AppText, Card, Chip, IconButton, SegmentBar } from '@/components/ui';
 import { formatEventWhen, formatHour, occursOn, sameDay } from '@/lib/calendar';
 import { formatTime, formatToday, greeting } from '@/lib/dates';
+import { formatBalance, formatEuroRound, monthKeyOf, monthLabel, nextDue, relativeDue, summarize } from '@/lib/budget';
 import { toRenew } from '@/lib/documents';
 import { preview } from '@/lib/messages';
+import { useBudget } from '@/providers/BudgetProvider';
 import { useChat } from '@/providers/ChatProvider';
 import { useDocuments } from '@/providers/DocumentsProvider';
 import { useEvents } from '@/providers/EventsProvider';
@@ -32,6 +34,16 @@ export default function HomeScreen() {
   const { events } = useEvents();
   const { documents } = useDocuments();
   const renew = toRenew(documents);
+  const { operations, recurring } = useBudget();
+  const month = monthKeyOf(new Date());
+  const budget = summarize(operations, month);
+  const weekAhead = new Date().getTime() + 7 * 86_400_000;
+  const upcoming = recurring
+    .filter((r) => r.active)
+    .map((r) => ({ r, d: nextDue(r) }))
+    .filter(({ d }) => d.getTime() <= weekAhead)
+    .sort((a, b) => a.d.getTime() - b.d.getTime())[0];
+  const spentPct = budget.income > 0 ? Math.min(100, Math.round((budget.expense / budget.income) * 100)) : budget.expense > 0 ? 100 : 0;
 
   const now = new Date();
   const todayCount = events.filter((e) => occursOn(e, now)).length;
@@ -198,6 +210,80 @@ export default function HomeScreen() {
           )}
         </Card>
       </View>
+
+      {/* Budget — bloc citron vert (ou corail si le solde est négatif) */}
+      <Card
+        bg={budget.balance >= 0 ? colors.lime : colors.coral}
+        onPress={() => router.push('/budget')}
+        accessibilityLabel={`Budget de ${monthLabel(month)} : solde ${formatBalance(budget.balance)}. Ouvrir le budget`}
+        style={{ gap: space.md, padding: 18 }}>
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            right: -28,
+            top: -28,
+            width: 120,
+            height: 120,
+            borderRadius: 60,
+            backgroundColor: budget.balance >= 0 ? '#A5E886' : colors.coralSoft,
+          }}
+        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+            <IconTile icon={Wallet} bg={colors.ink} color={budget.balance >= 0 ? colors.lime : colors.coral} />
+            <AppText variant="bodyStrong">Budget de {monthLabel(month)}</AppText>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ajouter une dépense"
+            onPress={() => router.push('/operation-edition')}
+            hitSlop={8}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: space.md,
+              paddingVertical: 6,
+              borderRadius: radius.pill,
+              backgroundColor: colors.ink,
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            })}>
+            <Plus size={14} color={colors.white} strokeWidth={2.6} />
+            <AppText variant="label" color={colors.white}>
+              Dépense
+            </AppText>
+          </Pressable>
+        </View>
+        {budget.ops.length === 0 ? (
+          <AppText variant="section">Notez vos dépenses et revenus du mois</AppText>
+        ) : (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space.sm }}>
+              <AppText variant="hero" style={{ fontSize: 40, lineHeight: 44 }} adjustsFontSizeToFit numberOfLines={1}>
+                {formatBalance(budget.balance)}
+              </AppText>
+              <AppText variant="label">{budget.balance >= 0 ? 'restants' : 'de trop'}</AppText>
+            </View>
+            <View
+              accessibilityRole="progressbar"
+              accessibilityValue={{ min: 0, max: 100, now: spentPct }}
+              style={{ height: 10, borderRadius: 5, backgroundColor: colors.white, overflow: 'hidden' }}>
+              <View style={{ width: `${spentPct}%`, height: '100%', borderRadius: 5, backgroundColor: colors.ink }} />
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.sm }}>
+              <AppText variant="caption" style={{ flexShrink: 1 }}>
+                {formatEuroRound(budget.expense)} dépensés{budget.income > 0 ? ` sur ${formatEuroRound(budget.income)}` : ''}
+              </AppText>
+              {upcoming && (
+                <AppText variant="label" numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {upcoming.r.label} {relativeDue(upcoming.d)}
+                </AppText>
+              )}
+            </View>
+          </>
+        )}
+      </Card>
 
       {/* Papiers — bloc corail, seulement s'il y a quelque chose à renouveler */}
       {renew.length > 0 && (

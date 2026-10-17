@@ -12,9 +12,18 @@ type MessageRow = {
   id: string;
   household_id: string;
   sender_id: string | null;
-  kind: 'text' | 'items_added' | 'event_added' | 'document_added' | 'document_expiring';
+  kind: 'text' | 'items_added' | 'event_added' | 'document_added' | 'document_expiring' | 'expense_added';
   body: string;
-  meta: { items?: string[]; title?: string; starts_at?: string; all_day?: boolean; document_id?: string } | null;
+  meta: {
+    items?: string[];
+    title?: string;
+    starts_at?: string;
+    all_day?: boolean;
+    document_id?: string;
+    kind?: 'expense' | 'income';
+    label?: string;
+    amount_cents?: number;
+  } | null;
   created_at: string;
 };
 
@@ -88,6 +97,10 @@ Deno.serve(async (req) => {
       msg.meta?.starts_at ? `, ${formatWhen(msg.meta.starts_at, msg.meta.all_day === true)}` : ''
     }`;
     url = '/agenda';
+  } else if (msg.kind === 'expense_added') {
+    const amount = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format((msg.meta?.amount_cents ?? 0) / 100);
+    body = `a noté ${msg.meta?.kind === 'income' ? 'un revenu' : 'une dépense'} : ${msg.meta?.label ?? ''}, ${amount}`;
+    url = '/budget';
   } else if (msg.kind === 'document_added') {
     body = `a ajouté un papier : ${msg.meta?.title ?? 'papier'}`;
     url = '/papier';

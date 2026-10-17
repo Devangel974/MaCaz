@@ -13,6 +13,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { dayKey } from '@/lib/calendar';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
+import { BudgetProvider } from '@/providers/BudgetProvider';
 import { ChatProvider } from '@/providers/ChatProvider';
 import { DocumentsProvider } from '@/providers/DocumentsProvider';
 import { EventsProvider } from '@/providers/EventsProvider';
@@ -51,7 +52,9 @@ function DataProviders({ children }: { children: ReactNode }) {
     <ShoppingProvider key={household?.id ?? 'aucun'}>
       <ChatProvider>
         <EventsProvider>
-          <DocumentsProvider>{children}</DocumentsProvider>
+          <DocumentsProvider>
+            <BudgetProvider>{children}</BudgetProvider>
+          </DocumentsProvider>
         </EventsProvider>
       </ChatProvider>
     </ShoppingProvider>
@@ -73,7 +76,7 @@ function RootNavigator() {
   useEffect(() => {
     const url = response?.notification.request.content.data?.url;
     if (!inHousehold || typeof url !== 'string') return;
-    if (url === '/chat' || url === '/courses' || url === '/documents') router.navigate(url);
+    if (url === '/chat' || url === '/courses' || url === '/documents' || url === '/budget') router.navigate(url);
     if (url === '/papier') {
       const id = response?.notification.request.content.data?.id;
       if (typeof id === 'string') router.navigate({ pathname: '/papier', params: { id } });
@@ -101,6 +104,9 @@ function RootNavigator() {
         <Stack.Screen name="evenement" options={{ presentation: 'modal' }} />
         <Stack.Screen name="papier" />
         <Stack.Screen name="papier-edition" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="budget" />
+        <Stack.Screen name="operation" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="operation-edition" options={{ presentation: 'modal' }} />
       </Stack.Protected>
     </Stack>
   );

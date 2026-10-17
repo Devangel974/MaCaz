@@ -59,6 +59,29 @@ export function expiringText(daysLeft: number | null) {
   return `expire dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`;
 }
 
+export type ExpenseMeta = {
+  operationId: string;
+  kind: 'expense' | 'income';
+  label: string;
+  amountCents: number;
+  category: string;
+};
+
+/** Opération portée par une carte "expense_added". */
+export function expenseOf(m: Pick<Message, 'meta'>): ExpenseMeta | null {
+  const meta = metaOf(m);
+  if (typeof meta.operation_id !== 'string' || typeof meta.amount_cents !== 'number') return null;
+  return {
+    operationId: meta.operation_id,
+    kind: meta.kind === 'income' ? 'income' : 'expense',
+    label: typeof meta.label === 'string' ? meta.label : 'Opération',
+    amountCents: meta.amount_cents,
+    category: typeof meta.category === 'string' ? meta.category : 'autre',
+  };
+}
+
+const euroFmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+
 /** Aperçu d'une ligne pour l'accueil. */
 export function preview(m: Pick<Message, 'kind' | 'body' | 'meta'>) {
   if (m.kind === 'items_added') {
@@ -75,6 +98,11 @@ export function preview(m: Pick<Message, 'kind' | 'body' | 'meta'>) {
   if (m.kind === 'document_expiring') {
     const d = documentOf(m);
     return `${d?.title ?? 'Un papier'} ${expiringText(d?.daysLeft ?? null)}`;
+  }
+  if (m.kind === 'expense_added') {
+    const e = expenseOf(m);
+    if (!e) return 'a noté une opération';
+    return `a noté ${e.kind === 'income' ? 'un revenu' : 'une dépense'} : ${e.label}, ${euroFmt.format(e.amountCents / 100)}`;
   }
   return m.body;
 }

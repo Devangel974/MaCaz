@@ -1,7 +1,13 @@
 # MaCaz — appli familiale privée (MVP)
 
-Liste de courses partagée en temps réel, chat avec notifications push, agenda partagé et coffre à papiers (PDF + rappels d'expiration), pour deux personnes.
+Liste de courses partagée en temps réel, chat avec notifications push, agenda partagé, coffre à papiers (PDF + rappels d'expiration) et budget du foyer, pour deux personnes.
 Stack : Expo SDK 57 (React Native 0.86, Expo Router, TypeScript) · Supabase (Auth, Postgres + RLS, Realtime, Storage, Edge Functions) · Expo Push (FCM).
+
+### Budget (étape 4)
+- Accès par le bloc « Budget » de l'accueil : solde du mois, dépenses par catégorie, liste des opérations, mois précédents.
+- Dépenses et revenus (montants en centimes), payé par l'un de vous ou le compte commun.
+- « Chaque mois » : loyer, abonnements, salaire… ajoutés automatiquement le jour prévu par `apply_recurring()` (appelée à l'ouverture de l'appli, sans doublon).
+- Après la mise à jour : exécuter `supabase/migrations/006_budget.sql` et redéployer la fonction `notify`. Pas de nouveau module natif : pas besoin de refaire un build.
 
 ### Papiers (étape 3)
 - Photos (appareil photo ou galerie) réunies en **un seul PDF** sur le téléphone, ou PDF importé tel quel. Rangés dans un bucket Storage **privé** (`documents`), accessible uniquement aux deux membres de la caz.
@@ -127,9 +133,12 @@ src/
     evenement.tsx            (modale) création / modification d'un événement
     papier.tsx               fiche d'un papier (aperçu, échéance, rappels, ouvrir / partager le PDF)
     papier-edition.tsx       (modale) ajout / modification d'un papier (photos → PDF)
+    budget.tsx               budget du mois (solde, catégories, opérations)
+    operation.tsx            (modale) détail d'une opération ou d'une récurrence
+    operation-edition.tsx    (modale) ajout / modification d'une dépense ou d'un revenu
     (tabs)/                  accueil, courses, chat, agenda, documents
   components/                ui.tsx (boutons, cartes, champs…), Avatar, TabBar, DocLock (verrou papiers)…
-  providers/                 Auth, Household, Shopping, Chat, Events, Documents (état + temps réel)
+  providers/                 Auth, Household, Shopping, Chat, Events, Documents, Budget (état + temps réel)
   lib/                       supabase, notifications, catégories d'articles, dates, types BDD
   theme/                     couleurs, typo, espacements (planche « Système visuel »)
 supabase/
@@ -138,6 +147,7 @@ supabase/
   migrations/003_chat_delete.sql  suppression dans le chat
   migrations/004_reglages.sql     réglages communs (cartes courses / agenda dans le chat)
   migrations/005_documents.sql    papiers : table, bucket Storage privé, alertes d'expiration
+  migrations/006_budget.sql       budget : opérations, récurrences mensuelles, carte dans le chat
   functions/notify/          Edge Function Expo Push
 ```
 
