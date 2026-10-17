@@ -14,6 +14,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { dayKey } from '@/lib/calendar';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { ChatProvider } from '@/providers/ChatProvider';
+import { DocumentsProvider } from '@/providers/DocumentsProvider';
 import { EventsProvider } from '@/providers/EventsProvider';
 import { HouseholdProvider, useHousehold } from '@/providers/HouseholdProvider';
 import { ShoppingProvider } from '@/providers/ShoppingProvider';
@@ -49,7 +50,9 @@ function DataProviders({ children }: { children: ReactNode }) {
   return (
     <ShoppingProvider key={household?.id ?? 'aucun'}>
       <ChatProvider>
-        <EventsProvider>{children}</EventsProvider>
+        <EventsProvider>
+          <DocumentsProvider>{children}</DocumentsProvider>
+        </EventsProvider>
       </ChatProvider>
     </ShoppingProvider>
   );
@@ -70,7 +73,12 @@ function RootNavigator() {
   useEffect(() => {
     const url = response?.notification.request.content.data?.url;
     if (!inHousehold || typeof url !== 'string') return;
-    if (url === '/chat' || url === '/courses') router.navigate(url);
+    if (url === '/chat' || url === '/courses' || url === '/documents') router.navigate(url);
+    if (url === '/papier') {
+      const id = response?.notification.request.content.data?.id;
+      if (typeof id === 'string') router.navigate({ pathname: '/papier', params: { id } });
+      else router.navigate('/documents');
+    }
     if (url === '/agenda') {
       const day = response?.notification.request.content.data?.day;
       router.navigate({ pathname: '/agenda', params: typeof day === 'string' ? { date: dayKey(new Date(day)) } : {} });
@@ -91,6 +99,8 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="reglages" options={{ presentation: 'modal' }} />
         <Stack.Screen name="evenement" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="papier" />
+        <Stack.Screen name="papier-edition" options={{ presentation: 'modal' }} />
       </Stack.Protected>
     </Stack>
   );

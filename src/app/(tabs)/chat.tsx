@@ -1,6 +1,6 @@
 import { router, useIsFocused } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { CheckCheck, MessageSquare, Send, ShoppingBag, Trash2 } from 'lucide-react-native';
+import { BellRing, CheckCheck, FileText, MessageSquare, Send, ShoppingBag, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, Pressable, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -11,7 +11,7 @@ import { AppText, EmptyState, IconButton } from '@/components/ui';
 import type { Member } from '@/lib/database.types';
 import { formatDayLabel, formatTime, isSameDay } from '@/lib/dates';
 import { dayKey, formatHour } from '@/lib/calendar';
-import { eventOf, itemsOf } from '@/lib/messages';
+import { documentOf, eventOf, expiringText, itemsOf } from '@/lib/messages';
 import { setChatVisible } from '@/lib/notifications';
 import { errorMessage } from '@/lib/supabase';
 import { type ChatMessage, useChat } from '@/providers/ChatProvider';
@@ -62,7 +62,9 @@ export default function ChatScreen() {
         ? 'Ce message'
         : m.kind === 'items_added'
           ? 'Cette carte (les articles restent dans la liste de courses)'
-          : "Cette carte (l'événement reste dans l'agenda)";
+          : m.kind === 'event_added'
+            ? "Cette carte (l'événement reste dans l'agenda)"
+            : 'Cette carte (le papier reste dans tes papiers)';
     Alert.alert('Supprimer ?', `${what} sera supprimé pour vous deux.`, [
       { text: 'Annuler', style: 'cancel' },
       {
@@ -76,7 +78,7 @@ export default function ChatScreen() {
   const confirmClear = () =>
     Alert.alert(
       'Vider la conversation ?',
-      "Tous les messages et cartes seront supprimés pour vous deux. La liste de courses et l'agenda ne changent pas.",
+      "Tous les messages et cartes seront supprimés pour vous deux. La liste de courses, l'agenda et les papiers ne changent pas.",
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -171,6 +173,14 @@ export default function ChatScreen() {
                   <ItemsCard message={item} author={memberById(item.sender_id)} mine={mine} onLongPress={() => confirmDelete(item)} />
                 ) : item.kind === 'event_added' ? (
                   <EventAddedCard
+                    message={item}
+                    author={memberById(item.sender_id)}
+                    mine={mine}
+                    memberById={memberById}
+                    onLongPress={() => confirmDelete(item)}
+                  />
+                ) : item.kind === 'document_added' || item.kind === 'document_expiring' ? (
+                  <DocumentCard
                     message={item}
                     author={memberById(item.sender_id)}
                     mine={mine}
@@ -297,6 +307,79 @@ function Bubble({
         </View>
       )}
     </View>
+  );
+}
+
+function DocumentCard({
+  message,
+  author,
+  mine,
+  memberById,
+  onLongPress,
+}: {
+  message: ChatMessage;
+  author: Member | null;
+  mine: boolean;
+  memberById: (id: string | null) => Member | null;
+  onLongPress: () => void;
+}) {
+  const d = documentOf(message);
+  if (!d) return null;
+  const expiring = message.kind === 'document_expiring';
+  const owner = d.ownerUser ? memberById(d.ownerUser) : null;
+  const who = mine ? 'Tu as' : `${author?.display_name ?? "Quelqu'un"} a`;
+  const heading = expiring ? 'Rappel papiers' : `${who} ajouté un papier`;
+  const sub = expiring
+    ? `${owner ? `${owner.display_name} · ` : ''}${expiringText(d.daysLeft)}`
+    : owner
+      ? `À ${owner.display_name}`
+      : 'Pour la caz';
+  const Icon = expiring ? BellRing : FileText;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${heading} : ${d.title}, ${sub}. Ouvrir le papier`}
+      onPress={() => router.navigate({ pathname: '/papier', params: { id: d.documentId } })}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      style={({ pressed }) => [
+        {
+          alignSelf: expiring ? 'center' : mine ? 'flex-end' : 'flex-start',
+          width: expiring ? '90%' : '80%',
+          gap: space.sm,
+          padding: space.md,
+          paddingRight: space.lg,
+          borderRadius: 22,
+          backgroundColor: expiring ? colors.coral : colors.surface,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        },
+        expiring ? null : mine ? { borderBottomRightRadius: 6 } : { borderBottomLeftRadius: 6 },
+      ]}>
+      <AppText variant="label" color={expiring ? colors.ink : colors.ink3}>
+        {heading}
+      </AppText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 16,
+            backgroundColor: expiring ? colors.ink : owner ? personColors[owner.color].solid : '#B9A8FF',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Icon size={22} color={expiring ? colors.coral : colors.ink} strokeWidth={2.2} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText variant="bodyStrong" numberOfLines={2}>
+            {d.title}
+          </AppText>
+          <AppText variant="caption" color={expiring ? colors.ink : colors.ink3}>
+            {sub}
+          </AppText>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 

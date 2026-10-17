@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { CalendarDays, MessageSquare, Settings, Share2, ShoppingBag } from 'lucide-react-native';
+import { CalendarDays, FileText, MessageSquare, Settings, Share2, ShoppingBag } from 'lucide-react-native';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,8 +7,10 @@ import { AvatarPair } from '@/components/Avatar';
 import { AppText, Card, Chip, IconButton, SegmentBar } from '@/components/ui';
 import { formatEventWhen, formatHour, occursOn, sameDay } from '@/lib/calendar';
 import { formatTime, formatToday, greeting } from '@/lib/dates';
+import { toRenew } from '@/lib/documents';
 import { preview } from '@/lib/messages';
 import { useChat } from '@/providers/ChatProvider';
+import { useDocuments } from '@/providers/DocumentsProvider';
 import { useEvents } from '@/providers/EventsProvider';
 import { useHousehold } from '@/providers/HouseholdProvider';
 import { useShopping } from '@/providers/ShoppingProvider';
@@ -28,6 +30,8 @@ export default function HomeScreen() {
   const { items, toBuy, inCart } = useShopping();
   const { lastMessage, unreadCount } = useChat();
   const { events } = useEvents();
+  const { documents } = useDocuments();
+  const renew = toRenew(documents);
 
   const now = new Date();
   const todayCount = events.filter((e) => occursOn(e, now)).length;
@@ -194,6 +198,26 @@ export default function HomeScreen() {
           )}
         </Card>
       </View>
+
+      {/* Papiers — bloc corail, seulement s'il y a quelque chose à renouveler */}
+      {renew.length > 0 && (
+        <Card
+          bg={colors.coral}
+          onPress={() => router.navigate('/documents')}
+          accessibilityLabel={`${renew.length} papier${renew.length > 1 ? 's' : ''} à renouveler. Ouvrir les papiers`}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+          <IconTile icon={FileText} bg={colors.ink} color={colors.coral} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <AppText variant="bodyStrong">
+              {renew.length} papier{renew.length > 1 ? 's' : ''} à renouveler
+            </AppText>
+            <AppText variant="caption" numberOfLines={1}>
+              {renew.map((d) => d.title).join(' · ')}
+            </AppText>
+          </View>
+          <Chip label="Voir" bg={colors.ink} color={colors.white} />
+        </Card>
+      )}
     </ScrollView>
   );
 }

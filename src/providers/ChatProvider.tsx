@@ -56,6 +56,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const { household, me, partner, updateMe } = useHousehold();
   const showShopping = household?.chat_show_shopping ?? true;
   const showEvents = household?.chat_show_events ?? true;
+  const showDocuments = household?.chat_show_documents ?? true;
   const householdId = household?.id;
   const myId = me?.user_id;
 
@@ -165,9 +166,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const visible = useMemo(
     () =>
       messages.filter(
-        (m) => (m.kind !== 'items_added' || showShopping) && (m.kind !== 'event_added' || showEvents),
+        (m) => (m.kind !== 'items_added' || showShopping) && (m.kind !== 'event_added' || showEvents) &&
+          ((m.kind !== 'document_added' && m.kind !== 'document_expiring') || showDocuments),
       ),
-    [messages, showShopping, showEvents],
+    [messages, showShopping, showEvents, showDocuments],
   );
 
   const unreadCount = useMemo(() => {

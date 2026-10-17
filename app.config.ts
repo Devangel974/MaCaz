@@ -50,6 +50,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
+      'expo-image-picker',
+      {
+        cameraPermission: 'MaCaz utilise l’appareil photo pour photographier vos papiers.',
+        photosPermission: 'MaCaz accède à vos photos pour importer des papiers.',
+        microphonePermission: false,
+      },
+    ],
+    [
+      'expo-local-authentication',
+      { faceIDPermission: 'MaCaz protège vos papiers avec Face ID.' },
+    ],
+    [
       'expo-notifications',
       {
         color: '#1F6B57',

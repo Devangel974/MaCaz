@@ -5,7 +5,8 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type MemberColor = 'blue' | 'orange';
-export type MessageKind = 'text' | 'items_added' | 'event_added';
+export type MessageKind = 'text' | 'items_added' | 'event_added' | 'document_added' | 'document_expiring';
+export type DocType = 'passeport' | 'identite' | 'permis' | 'vitale' | 'assurance' | 'carte_grise' | 'autre';
 
 type HouseholdRow = {
   id: string;
@@ -13,6 +14,7 @@ type HouseholdRow = {
   invite_code: string;
   chat_show_shopping: boolean;
   chat_show_events: boolean;
+  chat_show_documents: boolean;
   created_by: string | null;
   created_at: string;
 };
@@ -23,7 +25,12 @@ export type Database = {
       households: {
         Row: HouseholdRow;
         Insert: never;
-        Update: { name?: string; chat_show_shopping?: boolean; chat_show_events?: boolean };
+        Update: {
+          name?: string;
+          chat_show_shopping?: boolean;
+          chat_show_events?: boolean;
+          chat_show_documents?: boolean;
+        };
         Relationships: [];
       };
       household_members: {
@@ -72,6 +79,56 @@ export type Database = {
           category?: string;
           checked?: boolean;
           archived_at?: string | null;
+        };
+        Relationships: [];
+      };
+      documents: {
+        Row: {
+          id: string;
+          household_id: string;
+          title: string;
+          doc_type: DocType;
+          owner_user: string | null;
+          expires_at: string | null;
+          remind_days: number[];
+          agenda_event_id: string | null;
+          notes: string | null;
+          file_path: string | null;
+          thumb_path: string | null;
+          page_count: number | null;
+          size_bytes: number | null;
+          last_alert_days: number | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id: string;
+          title: string;
+          doc_type?: DocType;
+          owner_user?: string | null;
+          expires_at?: string | null;
+          remind_days?: number[];
+          agenda_event_id?: string | null;
+          notes?: string | null;
+          file_path?: string | null;
+          thumb_path?: string | null;
+          page_count?: number | null;
+          size_bytes?: number | null;
+        };
+        Update: {
+          title?: string;
+          doc_type?: DocType;
+          owner_user?: string | null;
+          expires_at?: string | null;
+          remind_days?: number[];
+          agenda_event_id?: string | null;
+          notes?: string | null;
+          file_path?: string | null;
+          thumb_path?: string | null;
+          page_count?: number | null;
+          size_bytes?: number | null;
         };
         Relationships: [];
       };
@@ -143,6 +200,10 @@ export type Database = {
         Args: { p_code: string; p_display_name: string };
         Returns: HouseholdRow;
       };
+      check_document_alerts: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
       my_household_id: {
         Args: Record<PropertyKey, never>;
         Returns: string;
@@ -160,4 +221,6 @@ export type Member = PublicTables['household_members']['Row'];
 export type ShoppingItem = PublicTables['shopping_items']['Row'];
 export type Message = PublicTables['messages']['Row'];
 export type CalendarEvent = PublicTables['events']['Row'];
+export type HouseDocument = PublicTables['documents']['Row'];
+export type HouseDocumentUpdate = PublicTables['documents']['Update'];
 export type CalendarEventInput = Omit<PublicTables['events']['Insert'], 'household_id' | 'id'>;

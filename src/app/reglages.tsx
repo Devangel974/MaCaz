@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Bell, CalendarDays, LogOut, type LucideIcon, Share2, ShoppingBag, X } from 'lucide-react-native';
+import { Bell, CalendarDays, FileText, LogOut, Share2, ShoppingBag, X, type LucideIcon } from 'lucide-react-native';
 import { type ReactNode, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -133,6 +133,15 @@ export default function ReglagesScreen() {
             description="Une carte dans le chat (et une notification) à chaque nouvel événement."
             value={household.chat_show_events}
             onChange={(v) => saveHousehold({ chat_show_events: v })}
+            divider
+          />
+          <ToggleRow
+            icon={FileText}
+            tint={colors.coral}
+            title="Papiers"
+            description="Une carte quand un papier est ajouté, et quand il arrive à expiration."
+            value={household.chat_show_documents}
+            onChange={(v) => saveHousehold({ chat_show_documents: v })}
             divider
           />
         </Card>

@@ -12,9 +12,9 @@ type MessageRow = {
   id: string;
   household_id: string;
   sender_id: string | null;
-  kind: 'text' | 'items_added' | 'event_added';
+  kind: 'text' | 'items_added' | 'event_added' | 'document_added' | 'document_expiring';
   body: string;
-  meta: { items?: string[]; title?: string; starts_at?: string; all_day?: boolean } | null;
+  meta: { items?: string[]; title?: string; starts_at?: string; all_day?: boolean; document_id?: string } | null;
   created_at: string;
 };
 
@@ -57,6 +57,9 @@ Deno.serve(async (req) => {
   if (payload.table !== 'messages' || payload.type !== 'INSERT' || !msg) {
     return json({ skipped: true });
   }
+  // « Papier qui expire » : chaque téléphone a déjà son rappel local programmé (9 h, aux seuils choisis).
+  // Pas de push en plus, pour ne pas notifier deux fois.
+  if (msg.kind === 'document_expiring') return json({ skipped: 'local reminder' });
 
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SERVICE_KEY');
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey!, {
@@ -85,6 +88,9 @@ Deno.serve(async (req) => {
       msg.meta?.starts_at ? `, ${formatWhen(msg.meta.starts_at, msg.meta.all_day === true)}` : ''
     }`;
     url = '/agenda';
+  } else if (msg.kind === 'document_added') {
+    body = `a ajouté un papier : ${msg.meta?.title ?? 'papier'}`;
+    url = '/papier';
   } else {
     body = msg.body;
   }
@@ -100,7 +106,12 @@ Deno.serve(async (req) => {
         sound: 'default',
         priority: 'high',
         channelId: 'messages',
-        data: { url, messageId: msg.id, ...(msg.kind === 'event_added' && msg.meta?.starts_at ? { day: msg.meta.starts_at } : {}) },
+        data: {
+          url,
+          messageId: msg.id,
+          ...(msg.kind === 'event_added' && msg.meta?.starts_at ? { day: msg.meta.starts_at } : {}),
+          ...(msg.meta?.document_id ? { id: msg.meta.document_id } : {}),
+        },
       })),
     ),
   });

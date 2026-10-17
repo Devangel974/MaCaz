@@ -1,9 +1,13 @@
 # MaCaz — appli familiale privée (MVP)
 
-Liste de courses partagée en temps réel, chat avec notifications push et agenda partagé, pour deux personnes.
-Stack : Expo SDK 57 (React Native 0.86, Expo Router, TypeScript) · Supabase (Auth, Postgres + RLS, Realtime, Edge Functions) · Expo Push (FCM).
+Liste de courses partagée en temps réel, chat avec notifications push, agenda partagé et coffre à papiers (PDF + rappels d'expiration), pour deux personnes.
+Stack : Expo SDK 57 (React Native 0.86, Expo Router, TypeScript) · Supabase (Auth, Postgres + RLS, Realtime, Storage, Edge Functions) · Expo Push (FCM).
 
-Documents est présent dans la navigation sous forme d'écran « bientôt » : c'est l'étape 3.
+### Papiers (étape 3)
+- Photos (appareil photo ou galerie) réunies en **un seul PDF** sur le téléphone, ou PDF importé tel quel. Rangés dans un bucket Storage **privé** (`documents`), accessible uniquement aux deux membres de la caz.
+- Onglet verrouillé par empreinte / visage / code du téléphone, reverrouillé dès que l'appli passe en arrière-plan.
+- Rappels d'expiration (6 mois, 3 mois, 1 mois, 1 semaine, jour J au choix) : notification locale à 9 h sur les deux téléphones, carte dans le chat, et événement « Renouveler : … » dans l'agenda (optionnel).
+- Après la mise à jour : exécuter `supabase/migrations/005_documents.sql`, puis **refaire un build** (`npm run build:dev` / `npm run build:apk`) : de nouveaux modules natifs sont utilisés (appareil photo, empreinte, fichiers).
 
 ---
 
@@ -121,9 +125,11 @@ src/
     foyer-setup.tsx          créer le foyer / rejoindre avec un code
     reglages.tsx             (modale) Réglages : caz, options du chat, notifications, compte
     evenement.tsx            (modale) création / modification d'un événement
-    (tabs)/                  accueil, courses, chat, agenda, documents*   (* = bientôt)
-  components/                ui.tsx (boutons, cartes, champs…), Avatar, TabBar, ComingSoon
-  providers/                 Auth, Household, Shopping, Chat (état + temps réel)
+    papier.tsx               fiche d'un papier (aperçu, échéance, rappels, ouvrir / partager le PDF)
+    papier-edition.tsx       (modale) ajout / modification d'un papier (photos → PDF)
+    (tabs)/                  accueil, courses, chat, agenda, documents
+  components/                ui.tsx (boutons, cartes, champs…), Avatar, TabBar, DocLock (verrou papiers)…
+  providers/                 Auth, Household, Shopping, Chat, Events, Documents (état + temps réel)
   lib/                       supabase, notifications, catégories d'articles, dates, types BDD
   theme/                     couleurs, typo, espacements (planche « Système visuel »)
 supabase/
@@ -131,6 +137,7 @@ supabase/
   migrations/002_agenda.sql  table events, RLS, carte « ajouté à l'agenda » dans le chat
   migrations/003_chat_delete.sql  suppression dans le chat
   migrations/004_reglages.sql     réglages communs (cartes courses / agenda dans le chat)
+  migrations/005_documents.sql    papiers : table, bucket Storage privé, alertes d'expiration
   functions/notify/          Edge Function Expo Push
 ```
 
@@ -140,6 +147,7 @@ supabase/
 - Un membre ne peut modifier que son prénom, son jeton push et son « lu jusqu'à ». Sa couleur et son foyer sont verrouillés.
 - `added_by` et `checked_by` sont posés côté serveur. Un message ne peut être envoyé qu'en son propre nom.
 - Présence / « écrit… » : canal Realtime privé `household:<id>` protégé par RLS.
+- Fichiers des papiers : rangés sous `<id de la caz>/…` dans un bucket privé ; les politiques Storage refusent tout autre dossier. Liens signés de courte durée (60 s pour un PDF, 1 h pour une miniature).
 
 ### Commandes utiles
 `npm run typecheck` · `npm run lint` · `npx expo-doctor`
