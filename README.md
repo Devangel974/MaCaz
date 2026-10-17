@@ -119,7 +119,7 @@ src/
     _layout.tsx              polices, providers, routes protégées (connexion → foyer → onglets)
     connexion.tsx            email + mot de passe
     foyer-setup.tsx          créer le foyer / rejoindre avec un code
-    foyer.tsx                (modale) nom, membres, code, notifications, déconnexion
+    reglages.tsx             (modale) Réglages : caz, options du chat, notifications, compte
     evenement.tsx            (modale) création / modification d'un événement
     (tabs)/                  accueil, courses, chat, agenda, documents*   (* = bientôt)
   components/                ui.tsx (boutons, cartes, champs…), Avatar, TabBar, ComingSoon
@@ -129,6 +129,8 @@ src/
 supabase/
   schema.sql                 tables, RLS, RPC create/join, triggers, temps réel
   migrations/002_agenda.sql  table events, RLS, carte « ajouté à l'agenda » dans le chat
+  migrations/003_chat_delete.sql  suppression dans le chat
+  migrations/004_reglages.sql     réglages communs (cartes courses / agenda dans le chat)
   functions/notify/          Edge Function Expo Push
 ```
 

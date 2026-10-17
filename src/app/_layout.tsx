@@ -89,7 +89,7 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={inHousehold}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="foyer" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="reglages" options={{ presentation: 'modal' }} />
         <Stack.Screen name="evenement" options={{ presentation: 'modal' }} />
       </Stack.Protected>
     </Stack>

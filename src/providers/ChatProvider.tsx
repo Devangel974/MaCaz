@@ -54,6 +54,8 @@ function upsert(list: ChatMessage[], row: ChatMessage) {
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { household, me, partner, updateMe } = useHousehold();
+  const showShopping = household?.chat_show_shopping ?? true;
+  const showEvents = household?.chat_show_events ?? true;
   const householdId = household?.id;
   const myId = me?.user_id;
 
@@ -159,17 +161,26 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const partnerTyping =
     !!typingSince && !(newest && newest.sender_id === partnerId && newest.created_at >= typingSince);
 
+  // Cartes masquées par les réglages de la caz (Réglages › Chat).
+  const visible = useMemo(
+    () =>
+      messages.filter(
+        (m) => (m.kind !== 'items_added' || showShopping) && (m.kind !== 'event_added' || showEvents),
+      ),
+    [messages, showShopping, showEvents],
+  );
+
   const unreadCount = useMemo(() => {
     if (!me) return 0;
-    return messages.filter((m) => m.sender_id !== me.user_id && m.created_at > me.last_read_at).length;
-  }, [messages, me]);
+    return visible.filter((m) => m.sender_id !== me.user_id && m.created_at > me.last_read_at).length;
+  }, [visible, me]);
 
   const value: ChatContextValue = {
     loading,
-    messages,
+    messages: visible,
     hasMore,
     unreadCount,
-    lastMessage: messages[0] ?? null,
+    lastMessage: visible[0] ?? null,
     partnerOnline,
     partnerTyping,
     async loadMore() {

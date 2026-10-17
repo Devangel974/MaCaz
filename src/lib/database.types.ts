@@ -11,6 +11,8 @@ type HouseholdRow = {
   id: string;
   name: string;
   invite_code: string;
+  chat_show_shopping: boolean;
+  chat_show_events: boolean;
   created_by: string | null;
   created_at: string;
 };
@@ -21,7 +23,7 @@ export type Database = {
       households: {
         Row: HouseholdRow;
         Insert: never;
-        Update: { name?: string };
+        Update: { name?: string; chat_show_shopping?: boolean; chat_show_events?: boolean };
         Relationships: [];
       };
       household_members: {
@@ -153,6 +155,7 @@ export type Database = {
 
 type PublicTables = Database['public']['Tables'];
 export type Household = PublicTables['households']['Row'];
+export type HouseholdUpdate = PublicTables['households']['Update'];
 export type Member = PublicTables['household_members']['Row'];
 export type ShoppingItem = PublicTables['shopping_items']['Row'];
 export type Message = PublicTables['messages']['Row'];

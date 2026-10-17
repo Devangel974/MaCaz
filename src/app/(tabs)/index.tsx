@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
-import { CalendarDays, MessageSquare, Share2, ShoppingBag } from 'lucide-react-native';
+import { CalendarDays, MessageSquare, Settings, Share2, ShoppingBag } from 'lucide-react-native';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarPair } from '@/components/Avatar';
-import { AppText, Card, Chip, SegmentBar } from '@/components/ui';
+import { AppText, Card, Chip, IconButton, SegmentBar } from '@/components/ui';
 import { formatEventWhen, formatHour, occursOn, sameDay } from '@/lib/calendar';
 import { formatTime, formatToday, greeting } from '@/lib/dates';
 import { preview } from '@/lib/messages';
@@ -56,14 +56,17 @@ export default function HomeScreen() {
             {salut} {me?.display_name}
           </AppText>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Réglages du foyer"
-          onPress={() => router.push('/foyer')}
-          hitSlop={8}
-          style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}>
-          <AvatarPair members={members} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Membres de la caz, ouvrir les réglages"
+            onPress={() => router.push('/reglages')}
+            hitSlop={8}
+            style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}>
+            <AvatarPair members={members} />
+          </Pressable>
+          <IconButton icon={Settings} label="Réglages" onPress={() => router.push('/reglages')} />
+        </View>
       </View>
 
       {/* Invitation tant que le foyer n'a qu'un membre */}

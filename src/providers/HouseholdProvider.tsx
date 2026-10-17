@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import type { Database, Household, Member } from '@/lib/database.types';
+import type { Database, Household, HouseholdUpdate, Member } from '@/lib/database.types';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 
@@ -26,6 +26,8 @@ type HouseholdContextValue = {
   createHousehold: (displayName: string) => Promise<void>;
   joinHousehold: (code: string, displayName: string) => Promise<void>;
   updateMe: (patch: MemberUpdate) => Promise<void>;
+  /** Nom et réglages communs de la caz. */
+  updateHousehold: (patch: HouseholdUpdate) => Promise<void>;
   refresh: () => Promise<void>;
   /** Déconnexion propre : on retire le jeton push de ce téléphone avant. */
   signOut: () => Promise<void>;
@@ -81,6 +83,11 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'household_members', filter: `household_id=eq.${householdId}` },
+        () => load(),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'households', filter: `id=eq.${householdId}` },
         () => load(),
       )
       .subscribe();
@@ -139,6 +146,16 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       await load();
     },
     updateMe,
+    async updateHousehold(patch) {
+      if (!household) return;
+      const previous = household;
+      setState((prev) => (prev?.household ? { ...prev, household: { ...prev.household, ...patch } } : prev));
+      const { error } = await supabase.from('households').update(patch).eq('id', household.id);
+      if (error) {
+        setState((prev) => (prev ? { ...prev, household: previous } : prev));
+        throw error;
+      }
+    },
     refresh: load,
     async signOut() {
       if (me?.expo_push_token) await updateMe({ expo_push_token: null });
